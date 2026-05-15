@@ -79,6 +79,20 @@ Role dashboards · Client portal · Compliance dashboard · Audit trail.
 5. **Production:** change all seeded passwords, set `APP_DEBUG=false`,
    serve over HTTPS, and delete the `setup/` directory.
 
+### Recovering from a partial / failed import
+
+`schema.sql` is idempotent (`CREATE TABLE IF NOT EXISTS`), but if an
+earlier run left the database half-built, re-running it will skip the
+existing (incomplete) tables. Start clean instead:
+
+1. Run `database/reset.sql` (drops all AdvisorOS tables — destructive,
+   data-loss; only on an install with no real data).
+2. Run `database/schema.sql`, then `database/seed.sql`
+   (or just `php setup/install.php`).
+
+In phpMyAdmin: open the database → SQL tab → paste each file's contents
+in the order above.
+
 ## Roadmap
 
 - **Phase 2** — Proposal generator + PDF export, AI summary tools,

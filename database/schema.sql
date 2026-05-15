@@ -153,36 +153,6 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ---------------------------------------------------------------------
--- Leads
--- ---------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS leads (
-    id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-    tenant_id        BIGINT UNSIGNED NOT NULL,
-    name             VARCHAR(120) NOT NULL,
-    phone            VARCHAR(40)  NULL,
-    email            VARCHAR(150) NULL,
-    source           VARCHAR(80)  NULL,
-    product_interest VARCHAR(120) NULL,
-    budget_range     VARCHAR(80)  NULL,
-    assigned_to      BIGINT UNSIGNED NULL,
-    status           ENUM('new','contacted','qualified','appointment_set','proposal_sent','converted','lost') NOT NULL DEFAULT 'new',
-    follow_up_date   DATE NULL,
-    notes            TEXT NULL,
-    converted_client_id BIGINT UNSIGNED NULL,
-    created_by       BIGINT UNSIGNED NULL,
-    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    deleted_at       DATETIME NULL,
-    PRIMARY KEY (id),
-    KEY idx_lead_tenant (tenant_id),
-    KEY idx_lead_status (tenant_id, status),
-    KEY idx_lead_assigned (assigned_to),
-    KEY idx_lead_followup (tenant_id, follow_up_date),
-    CONSTRAINT fk_lead_tenant   FOREIGN KEY (tenant_id)   REFERENCES tenants (id) ON DELETE CASCADE,
-    CONSTRAINT fk_lead_assigned FOREIGN KEY (assigned_to) REFERENCES users (id) ON DELETE SET NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- ---------------------------------------------------------------------
 -- Clients
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS clients (
@@ -222,10 +192,41 @@ CREATE TABLE IF NOT EXISTS clients (
     CONSTRAINT fk_client_portal  FOREIGN KEY (portal_user_id) REFERENCES users (id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Link converted lead -> client (added after clients exists)
-ALTER TABLE leads
-    ADD CONSTRAINT fk_lead_client FOREIGN KEY (converted_client_id)
-    REFERENCES clients (id) ON DELETE SET NULL;
+-- ---------------------------------------------------------------------
+-- Leads
+--   converted_client_id references clients; clients is created above so
+--   the FK is defined inline (keeps the whole script idempotent and
+--   safe to re-run — no standalone ALTER that would clash on rerun).
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS leads (
+    id               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    tenant_id        BIGINT UNSIGNED NOT NULL,
+    name             VARCHAR(120) NOT NULL,
+    phone            VARCHAR(40)  NULL,
+    email            VARCHAR(150) NULL,
+    source           VARCHAR(80)  NULL,
+    product_interest VARCHAR(120) NULL,
+    budget_range     VARCHAR(80)  NULL,
+    assigned_to      BIGINT UNSIGNED NULL,
+    status           ENUM('new','contacted','qualified','appointment_set','proposal_sent','converted','lost') NOT NULL DEFAULT 'new',
+    follow_up_date   DATE NULL,
+    notes            TEXT NULL,
+    converted_client_id BIGINT UNSIGNED NULL,
+    created_by       BIGINT UNSIGNED NULL,
+    created_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at       DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    deleted_at       DATETIME NULL,
+    PRIMARY KEY (id),
+    KEY idx_lead_tenant (tenant_id),
+    KEY idx_lead_status (tenant_id, status),
+    KEY idx_lead_assigned (assigned_to),
+    KEY idx_lead_followup (tenant_id, follow_up_date),
+    KEY idx_lead_client (converted_client_id),
+    CONSTRAINT fk_lead_tenant   FOREIGN KEY (tenant_id)   REFERENCES tenants (id) ON DELETE CASCADE,
+    CONSTRAINT fk_lead_assigned FOREIGN KEY (assigned_to) REFERENCES users (id) ON DELETE SET NULL,
+    CONSTRAINT fk_lead_client   FOREIGN KEY (converted_client_id) REFERENCES clients (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 
 -- ---------------------------------------------------------------------
 -- Financial profiles / snapshot
