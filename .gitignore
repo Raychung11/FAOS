@@ -12,6 +12,9 @@ uploads/proposals/*
 !uploads/documents/.gitkeep
 !uploads/proposals/.gitkeep
 
+# Installer lock (generated on the server after first run)
+setup/.installed.lock
+
 # Logs
 *.log
 logs/

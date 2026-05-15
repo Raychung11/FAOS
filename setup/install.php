@@ -25,6 +25,21 @@ if (!$isCli) {
     echo '<pre style="font-family:monospace;background:#0B1F3A;color:#cdd6e4;padding:20px">';
 }
 
+// One-time web lock: once installed, refuse to run again from the
+// browser so the public installer cannot be replayed. The CLI is
+// always allowed (re-running is intentional during development).
+$lockFile = __DIR__ . '/.installed.lock';
+if (!$isCli && is_file($lockFile)) {
+    http_response_code(403);
+    $out('AdvisorOS is already installed.');
+    $out('');
+    $out('For security, delete the entire /setup directory now.');
+    $out('To re-run intentionally: remove setup/.installed.lock, or run');
+    $out('  php setup/install.php  from the command line.');
+    if (!$isCli) { echo '</pre>'; }
+    exit;
+}
+
 try {
     $pdo = db();
 
@@ -104,6 +119,13 @@ try {
     $out(' Compliance    compliance@demo-advisory.test');
     $out('=============================================================');
     $out(' SECURITY: change these passwords and delete setup/ in production.');
+
+    // Lock the web installer against replay.
+    @file_put_contents($lockFile, 'installed ' . date('c') . "\n");
+    if (!$isCli) {
+        $out('');
+        $out(' The web installer is now locked. Delete the /setup directory.');
+    }
 } catch (Throwable $e) {
     http_response_code(500);
     $out('INSTALL FAILED: ' . $e->getMessage());

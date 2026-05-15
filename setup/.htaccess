@@ -1,6 +1,20 @@
-# AdvisorOS — block direct web access
-Require all denied
+# AdvisorOS — setup directory.
+# Deny everything by default, but allow the one-time web installer.
+# install.php self-locks after a successful run; delete this whole
+# directory once the platform is installed.
+
+<IfModule mod_authz_core.c>
+  Require all denied
+  <Files "install.php">
+    Require all granted
+  </Files>
+</IfModule>
+
 <IfModule !mod_authz_core.c>
-Order deny,allow
-Deny from all
+  Order deny,allow
+  Deny from all
+  <Files "install.php">
+    Order allow,deny
+    Allow from all
+  </Files>
 </IfModule>
