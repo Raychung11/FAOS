@@ -85,13 +85,18 @@ Role dashboards · Client portal · Compliance dashboard · Audit trail.
 earlier run left the database half-built, re-running it will skip the
 existing (incomplete) tables. Start clean instead:
 
-1. Run `database/reset.sql` (drops all AdvisorOS tables — destructive,
-   data-loss; only on an install with no real data).
-2. Run `database/schema.sql`, then `database/seed.sql`
-   (or just `php setup/install.php`).
+**One-click (browser, no CLI):** visit
+`/setup/install.php?fresh=1`. This drops every AdvisorOS table
+(`reset.sql`), then re-applies `schema.sql` + `seed.sql` and creates the
+accounts. Destructive — only on an install with no real data.
 
-In phpMyAdmin: open the database → SQL tab → paste each file's contents
-in the order above.
+**Manual (phpMyAdmin):** open the database → SQL tab → paste each
+file's contents in this order:
+
+1. `database/reset.sql` (drops all AdvisorOS tables — destructive,
+   data-loss; only on an install with no real data).
+2. `database/schema.sql`, then `database/seed.sql`
+   (or just run `php setup/install.php`).
 
 ## Roadmap
 

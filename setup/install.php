@@ -40,8 +40,20 @@ if (!$isCli && is_file($lockFile)) {
     exit;
 }
 
+// Opt-in destructive reset. Use this to recover a database left in an
+// inconsistent state by a partially-applied schema (e.g. duplicate
+// foreign-key constraint errors). CLI: --fresh   Web: ?fresh=1
+$fresh = in_array('--fresh', $argv ?? [], true)
+      || (($_GET['fresh'] ?? '') === '1');
+
 try {
     $pdo = db();
+
+    if ($fresh) {
+        $out('!! FRESH INSTALL — dropping all existing AdvisorOS tables ...');
+        $pdo->exec(file_get_contents(__DIR__ . '/../database/reset.sql'));
+        $out('  all tables dropped.');
+    }
 
     // ---- Schema ---------------------------------------------------
     $out('→ Applying schema.sql ...');
