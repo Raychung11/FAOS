@@ -21,9 +21,27 @@ if (has_role('financial_advisor') && (int) $p['advisor_id'] !== (int) current_us
 $html = render_proposal_html($p, tenant_brand());
 
 if (!dompdf_available()) {
-    set_flash('info', 'Server-side PDF is not enabled (DomPDF not installed). '
-        . 'Use “Print / Save as PDF” to export — it produces the same document.');
-    redirect('advisor/proposal-view.php?id=' . $id);
+    // No DomPDF on this host — serve the document and open the browser's
+    // print dialog so the user can choose "Save as PDF" (identical output,
+    // zero dependency). To enable a one-click server PDF instead, run:
+    //   composer require dompdf/dompdf
+    audit_log('export', 'proposals', (int) $p['id'], 'Proposal opened for PDF (print)');
+
+    $banner = '<div class="noprint" style="background:#C9A227;color:#2b2300;'
+        . 'font:600 13px/1.5 sans-serif;padding:12px 18px;text-align:center">'
+        . 'Your print dialog will open — choose <strong>“Save as PDF”</strong> '
+        . 'as the destination. '
+        . '<a href="' . e(url('advisor/proposal-view.php?id=' . (int) $p['id'])) . '" '
+        . 'style="color:#2b2300;text-decoration:underline">Back to proposal</a></div>';
+    $script = "<script>window.addEventListener('load',function(){"
+        . "setTimeout(function(){window.print();},400);});</script>";
+
+    $page = str_replace('<body>', '<body>' . $banner, $html);
+    $page = str_replace('</body>', $script . '</body>', $page);
+
+    header('Content-Type: text/html; charset=utf-8');
+    echo $page;
+    exit;
 }
 
 $dompdf = new \Dompdf\Dompdf(['isRemoteEnabled' => false, 'defaultFont' => 'Helvetica']);
