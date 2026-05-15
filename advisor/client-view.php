@@ -82,6 +82,9 @@ require __DIR__ . '/../includes/header.php';
     <?php if (can('reviews.manage')): ?>
       <a class="btn-os gold sm" href="<?= e(url('advisor/review-edit.php?client_id='.$id)) ?>">Start annual review</a>
     <?php endif; ?>
+    <?php if (can('proposals.manage')): ?>
+      <a class="btn-os sm" href="<?= e(url('advisor/proposal-edit.php?client_id='.$id)) ?>">Generate proposal</a>
+    <?php endif; ?>
   </div>
 </div>
 
