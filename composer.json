@@ -1,0 +1,19 @@
+{
+    "name": "advisoros/platform",
+    "description": "AdvisorOS — The Client Servicing Operating System for Financial Advisors (multi-tenant SaaS).",
+    "type": "project",
+    "license": "proprietary",
+    "require": {
+        "php": ">=8.1",
+        "ext-pdo": "*",
+        "ext-fileinfo": "*",
+        "ext-json": "*"
+    },
+    "suggest": {
+        "phpmailer/phpmailer": "Phase 2 — transactional email (password resets, reminders)",
+        "dompdf/dompdf": "Phase 2 — proposal & annual review PDF generation"
+    },
+    "config": {
+        "optimize-autoloader": true
+    }
+}
