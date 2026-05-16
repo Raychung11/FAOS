@@ -13,6 +13,9 @@ use App\Controllers\Api\ReportController;
 use App\Controllers\Api\ReconciliationController;
 use App\Controllers\Api\FinanceController;
 use App\Controllers\Api\BankReconController;
+use App\Controllers\Api\ProcurementController;
+use App\Controllers\Api\ProductionController;
+use App\Controllers\Api\ReplenishmentController;
 
 /** @var Router $r */
 $r = new Router();
@@ -36,6 +39,9 @@ $r->get('/reports',   [PageController::class, 'reports']);
 $r->get('/reconciliation', [PageController::class, 'reconciliation']);
 $r->get('/finance',   [PageController::class, 'finance']);
 $r->get('/bank-recon',[PageController::class, 'bankRecon']);
+$r->get('/procurement',  [PageController::class, 'procurement']);
+$r->get('/production',   [PageController::class, 'production']);
+$r->get('/replenishment',[PageController::class, 'replenishment']);
 
 // ---- API: session / identity ----------------------------------------------
 $r->get('/api/me', [MasterDataController::class, 'me']);
@@ -102,6 +108,29 @@ $r->get('/api/recon/batches',     [BankReconController::class, 'batches'],    'f
 $r->get('/api/recon/exceptions',  [BankReconController::class, 'exceptions'], 'finance.view');
 $r->get('/api/recon/imports',     [BankReconController::class, 'imports'],    'finance.view');
 $r->post('/api/recon/match',      [BankReconController::class, 'match'],      'finance.manage');
+
+// ---- API: procurement (Supplier PO -> GRN -> stock + AP) ------------------
+$r->get('/api/procurement/po',            [ProcurementController::class, 'listPO'],     'procurement.manage');
+$r->post('/api/procurement/po',           [ProcurementController::class, 'createPO'],   'procurement.manage');
+$r->get('/api/procurement/po/{id}',       [ProcurementController::class, 'showPO'],     'procurement.manage');
+$r->post('/api/procurement/po/{id}/approve', [ProcurementController::class, 'approvePO'], 'procurement.manage');
+$r->post('/api/procurement/grn',          [ProcurementController::class, 'receiveGRN'], 'procurement.manage');
+$r->get('/api/procurement/grn',           [ProcurementController::class, 'listGRN'],    'procurement.manage');
+
+// ---- API: central-kitchen production --------------------------------------
+$r->get('/api/production',                [ProductionController::class, 'list'],     'kitchen.manage');
+$r->post('/api/production',               [ProductionController::class, 'create'],   'kitchen.manage');
+$r->get('/api/production/{id}',           [ProductionController::class, 'show'],     'kitchen.manage');
+$r->post('/api/production/{id}/start',    [ProductionController::class, 'start'],    'kitchen.manage');
+$r->post('/api/production/{id}/complete', [ProductionController::class, 'complete'], 'kitchen.manage');
+
+// ---- API: outlet replenishment (PR -> distribution) -----------------------
+$r->get('/api/replenishment',              [ReplenishmentController::class, 'list'],    'stock.manage');
+$r->post('/api/replenishment',             [ReplenishmentController::class, 'create'],  'stock.manage');
+$r->get('/api/replenishment/{id}',         [ReplenishmentController::class, 'show'],    'stock.manage');
+$r->post('/api/replenishment/{id}/approve',[ReplenishmentController::class, 'approve'], 'procurement.manage');
+$r->post('/api/replenishment/{id}/reject', [ReplenishmentController::class, 'reject'],  'procurement.manage');
+$r->post('/api/replenishment/{id}/fulfil', [ReplenishmentController::class, 'fulfil'],  'procurement.manage');
 
 // ---- API: reconciliation ---------------------------------------------------
 $r->post('/api/reconciliation/import',  [ReconciliationController::class, 'import'],   'reconciliation.manage');

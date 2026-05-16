@@ -38,6 +38,12 @@ $nav = fn (string $href, string $label) =>
       <?php if ($can('reports.view')): ?><?= $nav('/reports', '📈 Reports') ?><?php endif; ?>
       <?php if ($can('reconciliation.manage')): ?><?= $nav('/reconciliation', '🔁 Reconciliation') ?><?php endif; ?>
       <?php if ($can('qr.print')): ?><?= $nav('/qr-labels', '🏷️ QR Labels') ?><?php endif; ?>
+      <?php if ($can('procurement.manage') || $can('kitchen.manage') || $can('stock.manage')): ?>
+        <div class="grp">Supply Chain</div>
+        <?php if ($can('procurement.manage')): ?><?= $nav('/procurement', '🚚 Procurement') ?><?php endif; ?>
+        <?php if ($can('kitchen.manage')): ?><?= $nav('/production', '🍳 Central Kitchen') ?><?php endif; ?>
+        <?php if ($can('stock.manage')): ?><?= $nav('/replenishment', '📦 Replenishment') ?><?php endif; ?>
+      <?php endif; ?>
       <?php if ($can('masterdata.manage')): ?>
         <div class="grp">Master Data</div>
         <?= $nav('/master/products', '🍔 Products') ?>

@@ -143,6 +143,44 @@ final class PageController extends Controller
         $this->view('finance.bankrecon', ['title' => 'Bank Reconciliation']);
     }
 
+    public function procurement(Request $req): void
+    {
+        Auth::requirePermission($req, 'procurement.manage');
+        $this->view('supply.procurement', [
+            'title'      => 'Procurement',
+            'suppliers'  => Database::all('SELECT id, code, name FROM suppliers WHERE company_id=? AND is_active=1 ORDER BY name', [$this->companyId()]),
+            'warehouses' => Database::all('SELECT id, name, type FROM warehouses WHERE company_id=? AND is_active=1 ORDER BY name', [$this->companyId()]),
+            'products'   => Database::all('SELECT id, sku, name, cost_price FROM products WHERE company_id=? AND is_active=1 ORDER BY name', [$this->companyId()]),
+        ]);
+    }
+
+    public function production(Request $req): void
+    {
+        Auth::requirePermission($req, 'kitchen.manage');
+        $this->view('supply.production', [
+            'title'      => 'Central Kitchen Production',
+            'warehouses' => Database::all("SELECT id, name FROM warehouses WHERE company_id=? AND is_active=1 AND type='central_kitchen' ORDER BY name", [$this->companyId()]),
+            'products'   => Database::all(
+                "SELECT p.id, p.sku, p.name FROM products p
+                 JOIN recipes r ON r.product_id = p.id AND r.is_active=1
+                 WHERE p.company_id=? AND p.is_active=1 ORDER BY p.name",
+                [$this->companyId()]
+            ),
+        ]);
+    }
+
+    public function replenishment(Request $req): void
+    {
+        Auth::requirePermission($req, 'stock.manage');
+        $this->view('supply.replenishment', [
+            'title'      => 'Outlet Replenishment',
+            'canApprove' => Auth::can('procurement.manage'),
+            'outlets'    => $this->outletList(),
+            'warehouses' => Database::all('SELECT id, name FROM warehouses WHERE company_id=? AND is_active=1 ORDER BY name', [$this->companyId()]),
+            'products'   => Database::all('SELECT id, sku, name FROM products WHERE company_id=? AND is_active=1 ORDER BY name', [$this->companyId()]),
+        ]);
+    }
+
     private function outletList(bool $kioskHubOnly = false): array
     {
         $u = Auth::user();

@@ -104,8 +104,17 @@ Every request: `index.php` → `Router` (CSRF + RBAC) → Controller → Service
 - Dashboards — Worker / Outlet / HQ / AI
 - Auth & RBAC, audit logging, scan logging
 
-**Phase 2 (schema + APIs)** — Central Kitchen production orders, Procurement
-(PR/PO/GRN), Inventory adjustments & balances ledger.
+**Phase 2 (implemented — the core operating loop)**
+- **Procurement**: Supplier PO → approve → GRN. GRN creates product batches
+  (expiry from shelf life), posts `receive` stock movements, updates the PO
+  (partial/received), and **auto-raises the supplier invoice in AP**.
+- **Central Kitchen production**: production order against a recipe/BOM →
+  start → complete. FEFO-tagged ingredient consumption from the kitchen
+  warehouse (blocks on insufficient stock), computes the output unit cost,
+  and receives the produced batch back into the kitchen.
+- **Outlet replenishment**: outlet/restaurant raises a Purchase Request →
+  approve → fulfil, which distributes stock (warehouse → outlet transfer);
+  blocks if the source is short so it never partially fulfils.
 
 **Phase 3 (implemented services)** — AI forecasting (weighted moving average +
 day-of-week seasonality, AI narrative when a provider key is set), delayed-report
