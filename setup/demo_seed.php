@@ -158,6 +158,29 @@ try {
          'active'=>true,'author'=>'Demo Advisor','updated_at'=>date('Y-m-d H:i')],
     ])]);
 
+    // --- Revenue model: per-report terms on the demo plan --------
+    $pdo->prepare(
+        "UPDATE subscription_plans
+         SET features = JSON_SET(COALESCE(features, JSON_OBJECT()),
+             '$.report_price', 15.0, '$.report_quota', 20)
+         WHERE code='professional'"
+    )->execute();
+
+    // --- Referral state + metered usage for the demo firm --------
+    $up = $pdo->prepare(
+        'INSERT INTO settings (tenant_id,setting_key,setting_value)
+         VALUES (?,?,?)
+         ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)'
+    );
+    $up->execute([$tenantId,'referral', json_encode([
+        'code'=>'FAOS-' . strtoupper(substr(md5('faos-ref-' . $tenantId),0,6)),
+        'credit_rm'=>200.0,'referred_by'=>'',
+        'signups'=>[['tenant_id'=>0,'at'=>date('Y-m-d')]],
+    ])]);
+    $up->execute([$tenantId,'usage:' . date('Y-m'), json_encode([
+        'proposal'=>25,'capability'=>8,'tax'=>6,'total'=>39,
+    ])]);
+
     // --- Risk profile --------------------------------------------
     $pdo->prepare(
         'INSERT INTO risk_profiles

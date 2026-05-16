@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/ai.php';
 require_once __DIR__ . '/../includes/insight.php';
 require_once __DIR__ . '/../includes/skills.php';
+require_once __DIR__ . '/../includes/billing.php';
 require_permission('proposals.manage');
 
 $tid = require_tenant();
@@ -140,6 +141,7 @@ if (is_post() && isset($_POST['ai_draft'])) {
         . fmt_date($client['next_review_date']) . ").";
 
     $aiResult = ai_complete($system, $user, 'proposal_draft', $stub);
+    meter_report('proposal');
     $sections = ai_split_sections($aiResult['text']);
     foreach ($sections as $k => $val) {
         if (trim((string) $val) !== '') { $draft[$k] = $val; }

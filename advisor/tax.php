@@ -7,6 +7,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/tax_my.php';
 require_once __DIR__ . '/../includes/settings.php';
+require_once __DIR__ . '/../includes/billing.php';
 require_permission('financial.manage');
 
 $tid = require_tenant();
@@ -35,6 +36,7 @@ if (is_post()) {
         $in['r_' . $k] = min((float) $cap, max(0.0, (float) input('r_' . $k, 0)));
     }
     setting_put_json($key, $in);
+    meter_report('tax');
     audit_log('update', 'tax', $clientId, 'Tax planning inputs updated');
     set_flash('success', 'Tax estimate updated.');
     redirect('advisor/tax.php?client_id=' . $clientId);

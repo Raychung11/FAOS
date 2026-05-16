@@ -7,6 +7,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/finance.php';
 require_once __DIR__ . '/../includes/settings.php';
+require_once __DIR__ . '/../includes/billing.php';
 require_permission('financial.manage');
 
 $tid = require_tenant();
@@ -36,6 +37,7 @@ if (is_post()) {
         'lump_sum'        => max(0.0, (float) input('lump_sum', 0)),
     ];
     setting_put_json($key, $in);
+    meter_report('capability');
     audit_log('update', 'capability', $clientId, 'Borrowing capability inputs updated');
     set_flash('success', 'Capability analysis updated.');
     redirect('advisor/capability.php?client_id=' . $clientId);

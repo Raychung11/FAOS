@@ -44,3 +44,31 @@ function setting_put_json(string $key, array $value): void
 {
     setting_put($key, json_encode($value, JSON_UNESCAPED_UNICODE));
 }
+
+/**
+ * Explicit-tenant accessors. Used where the acting session's tenant is
+ * not the target — e.g. the platform revenue rollup reading each
+ * tenant's usage, or crediting a referrer in another tenant. The
+ * tenant id is always a concrete (NOT NULL) value so the upsert is
+ * reliable on the UNIQUE(tenant_id, setting_key) key.
+ */
+function setting_get_json_for(int $tid, string $key, array $default = []): array
+{
+    $st = db()->prepare('SELECT setting_value FROM settings WHERE tenant_id = ? AND setting_key = ?');
+    $st->execute([$tid, $key]);
+    $raw = $st->fetchColumn();
+    if ($raw === false) {
+        return $default;
+    }
+    $d = json_decode((string) $raw, true);
+    return is_array($d) ? $d : $default;
+}
+
+function setting_put_json_for(int $tid, string $key, array $value): void
+{
+    db()->prepare(
+        'INSERT INTO settings (tenant_id, setting_key, setting_value)
+         VALUES (?, ?, ?)
+         ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+    )->execute([$tid, $key, json_encode($value, JSON_UNESCAPED_UNICODE)]);
+}

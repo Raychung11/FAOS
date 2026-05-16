@@ -21,6 +21,7 @@ if ($role === 'super_admin') {
         ['Dashboard',      'superadmin/dashboard.php',     '▣', null],
         ['Tenants',        'superadmin/tenants.php',       '▤', 'platform.manage'],
         ['Subscriptions',  'superadmin/subscriptions.php', '◷', 'platform.manage'],
+        ['Revenue',        'superadmin/revenue.php',       '$', 'platform.manage'],
         ['Audit Trail',    'superadmin/audit.php',         '◈', 'audit.view'],
     ];
 } elseif ($role === 'compliance_officer') {
@@ -57,6 +58,7 @@ if ($role === 'super_admin') {
         $nav['Administration'] = [
             ['Users',         'tenant/users.php',    '◍', 'users.manage'],
             ['Commissions',   'tenant/commissions.php','$', 'commissions.manage'],
+            ['Billing',       'tenant/billing.php',  '◉', 'tenant.manage'],
             ['Company',       'tenant/settings.php', '⚙', 'tenant.manage'],
             ['Audit Trail',   'tenant/audit.php',    '◈', 'audit.view'],
         ];
