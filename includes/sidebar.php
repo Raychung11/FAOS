@@ -49,6 +49,7 @@ if ($role === 'super_admin') {
         ['Follow-ups',     'advisor/followups.php',      '✓', 'appointments.manage'],
         ['Advisory Cases', 'advisor/cases.php',          '◫', 'cases.manage'],
         ['Proposals',      'advisor/proposals.php',      '◰', 'proposals.manage'],
+        ['AI Assistant',   'advisor/ai-assistant.php',   '✦', 'clients.view'],
         ['Documents',      'advisor/documents.php',      '▦', 'documents.manage'],
     ];
     if ($role === 'tenant_admin') {
