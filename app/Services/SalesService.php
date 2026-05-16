@@ -52,6 +52,9 @@ final class SalesService
 
             $totalQty = 0.0;
             $totalAmt = 0.0;
+            $subTotal = 0.0;
+            $taxTotal = 0.0;
+            $taxInclusive = self::setting((int) $p['company_id'], 'tax_inclusive', '1') !== '0';
             $locType = !empty($p['kiosk_id']) ? 'kiosk' : 'outlet';
             $locId = !empty($p['kiosk_id']) ? (int) $p['kiosk_id'] : (int) $p['outlet_id'];
 
@@ -64,15 +67,46 @@ final class SalesService
                 $price = isset($it['unit_price'])
                     ? (float) $it['unit_price']
                     : self::resolvePrice((int) $product['id'], (int) $p['outlet_id'], (float) $product['sell_price']);
-                $line = round($price * $qtyVal, 2);
+
+                // SST: resolve the product's tax code (NULL = no tax).
+                $taxRate = 0.0;
+                $taxCodeId = $product['tax_code_id'] ?? null;
+                if ($taxCodeId) {
+                    $taxRate = (float) Database::scalar(
+                        'SELECT rate FROM tax_codes WHERE id=? AND is_active=1',
+                        [$taxCodeId]
+                    );
+                }
+
+                if ($taxRate > 0 && $taxInclusive) {
+                    // Menu price already includes SST: split it out.
+                    $netUnit  = $price / (1 + $taxRate / 100);
+                    $line     = round($price * $qtyVal, 2);          // gross, unchanged
+                    $netLine  = round($netUnit * $qtyVal, 2);
+                    $taxLine  = round($line - $netLine, 2);
+                } elseif ($taxRate > 0) {
+                    // Tax added on top of the price.
+                    $netLine  = round($price * $qtyVal, 2);
+                    $taxLine  = round($netLine * $taxRate / 100, 2);
+                    $line     = round($netLine + $taxLine, 2);       // gross paid
+                } else {
+                    $line = round($price * $qtyVal, 2);
+                    $netLine = $line;
+                    $taxLine = 0.0;
+                }
+
                 $totalQty += $qtyVal;
                 $totalAmt += $line;
+                $subTotal += $netLine;
+                $taxTotal += $taxLine;
 
                 Database::insert(
                     'INSERT INTO sales_items
-                      (transaction_id, product_id, qr_label_id, qty, unit_price, line_amount)
-                     VALUES (?,?,?,?,?,?)',
-                    [$txnId, $product['id'], $it['qr_label_id'] ?? null, $qtyVal, $price, $line]
+                      (transaction_id, product_id, tax_code_id, qr_label_id, qty,
+                       unit_price, line_amount, tax_rate, tax_amount)
+                     VALUES (?,?,?,?,?,?,?,?,?)',
+                    [$txnId, $product['id'], $taxCodeId, $it['qr_label_id'] ?? null,
+                     $qtyVal, $price, $line, $taxRate, $taxLine]
                 );
 
                 // Deduct the finished product from the selling location.
@@ -101,8 +135,10 @@ final class SalesService
             }
 
             Database::run(
-                'UPDATE sales_transactions SET total_qty = ?, total_amount = ? WHERE id = ?',
-                [$totalQty, $totalAmt, $txnId]
+                'UPDATE sales_transactions
+                 SET total_qty = ?, total_amount = ?, subtotal_amount = ?, tax_amount = ?
+                 WHERE id = ?',
+                [$totalQty, $totalAmt, round($subTotal, 2), round($taxTotal, 2), $txnId]
             );
 
             return [
@@ -159,5 +195,15 @@ final class SalesService
             [$userId]
         );
         return $s ? (int) $s : null;
+    }
+
+    private static function setting(int $company, string $key, string $default): string
+    {
+        $v = Database::scalar(
+            'SELECT svalue FROM settings WHERE skey=? AND (company_id=? OR company_id IS NULL)
+             ORDER BY company_id IS NULL LIMIT 1',
+            [$key, $company]
+        );
+        return $v !== false && $v !== null ? (string) $v : $default;
     }
 }

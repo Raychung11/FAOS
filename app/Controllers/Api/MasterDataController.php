@@ -31,7 +31,8 @@ final class MasterDataController extends Controller
         'stock_groups' => ['stock_groups', ['company_id','code','name'], ['code','name'], true],
         'account_groups' => ['account_groups', ['company_id','code','name'], ['code','name'], true],
         'product_categories' => ['product_categories', ['company_id','parent_id','code','name'], ['code','name'], true],
-        'products'     => ['products', ['company_id','category_id','stock_group_id','account_group_id','sku','barcode','name','uom','type','cost_price','sell_price','reorder_level','shelf_life_days','is_sellable','is_active'], ['sku','barcode','name'], true],
+        'products'     => ['products', ['company_id','category_id','stock_group_id','account_group_id','tax_code_id','sku','barcode','name','uom','type','cost_price','sell_price','reorder_level','shelf_life_days','is_sellable','is_active'], ['sku','barcode','name'], true],
+        'tax_codes'    => ['tax_codes', ['company_id','code','name','tax_type','rate','is_active'], ['code','name'], true],
         'recipes'      => ['recipes', ['product_id','yield_qty','yield_uom','notes','is_active'], [], false],
         'recipe_items' => ['recipe_items', ['recipe_id','ingredient_id','qty','uom'], [], false],
     ];

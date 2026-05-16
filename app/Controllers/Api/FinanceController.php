@@ -26,6 +26,32 @@ final class FinanceController extends Controller
         Response::ok(FinanceService::pnl($this->companyId(), $from, $to));
     }
 
+    /** SST output-tax summary for the period (SST-02 return prep). */
+    public function sstSummary(Request $req): void
+    {
+        [$from, $to] = $this->range($req);
+        $rows = Database::all(
+            "SELECT COALESCE(tc.code,'NA') tax_code,
+                    COALESCE(tc.name,'No tax') tax_name,
+                    COALESCE(tc.rate,0) rate,
+                    ROUND(SUM(si.line_amount - si.tax_amount),2) taxable_sales,
+                    ROUND(SUM(si.tax_amount),2) output_tax
+             FROM sales_items si
+             JOIN sales_transactions st ON st.id = si.transaction_id
+             LEFT JOIN tax_codes tc ON tc.id = si.tax_code_id
+             WHERE st.company_id=? AND st.sold_at BETWEEN ? AND ?
+             GROUP BY tc.id, tc.code, tc.name, tc.rate
+             ORDER BY output_tax DESC",
+            [$this->companyId(), $from . ' 00:00:00', $to . ' 23:59:59']
+        );
+        Response::ok([
+            'period'          => ['from' => $from, 'to' => $to],
+            'rows'            => $rows,
+            'total_taxable'   => round(array_sum(array_column($rows, 'taxable_sales')), 2),
+            'total_output_tax' => round(array_sum(array_column($rows, 'output_tax')), 2),
+        ]);
+    }
+
     // ---- Accounts Payable --------------------------------------------------
 
     public function payables(Request $req): void

@@ -34,6 +34,7 @@ $nav = fn (string $href, string $label) =>
       <?php if ($can('dashboard.hq')): ?><?= $nav('/hq', '📊 HQ Dashboard') ?><?php endif; ?>
       <?php if ($can('finance.view')): ?><?= $nav('/finance', '💰 Finance') ?><?php endif; ?>
       <?php if ($can('finance.view')): ?><?= $nav('/bank-recon', '🏦 Bank Reconciliation') ?><?php endif; ?>
+      <?php if ($can('finance.view')): ?><?= $nav('/einvoicing', '🧾 e-Invoicing') ?><?php endif; ?>
       <?php if ($can('ai.view')): ?><?= $nav('/ai', '🤖 AI Forecasting') ?><?php endif; ?>
       <?php if ($can('reports.view')): ?><?= $nav('/reports', '📈 Reports') ?><?php endif; ?>
       <?php if ($can('reconciliation.manage')): ?><?= $nav('/reconciliation', '🔁 Reconciliation') ?><?php endif; ?>
@@ -50,6 +51,7 @@ $nav = fn (string $href, string $label) =>
         <?= $nav('/master/outlets', '📍 Outlets') ?>
         <?= $nav('/master/kiosks', '🛒 Kiosks') ?>
         <?= $nav('/master/suppliers', '🚚 Suppliers') ?>
+        <?= $nav('/master/tax_codes', '🧮 Tax Codes') ?>
         <?= $nav('/master/recipes', '📋 Recipes') ?>
       <?php endif; ?>
     </nav>

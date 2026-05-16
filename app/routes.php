@@ -16,6 +16,7 @@ use App\Controllers\Api\BankReconController;
 use App\Controllers\Api\ProcurementController;
 use App\Controllers\Api\ProductionController;
 use App\Controllers\Api\ReplenishmentController;
+use App\Controllers\Api\EInvoiceController;
 
 /** @var Router $r */
 $r = new Router();
@@ -42,6 +43,7 @@ $r->get('/bank-recon',[PageController::class, 'bankRecon']);
 $r->get('/procurement',  [PageController::class, 'procurement']);
 $r->get('/production',   [PageController::class, 'production']);
 $r->get('/replenishment',[PageController::class, 'replenishment']);
+$r->get('/einvoicing',   [PageController::class, 'einvoicing']);
 
 // ---- API: session / identity ----------------------------------------------
 $r->get('/api/me', [MasterDataController::class, 'me']);
@@ -91,6 +93,7 @@ $r->get('/api/reports/worker-performance', [ReportController::class, 'workerPerf
 // ---- API: finance (Accountant) --------------------------------------------
 $r->get('/api/finance/summary',           [FinanceController::class, 'summary'],            'finance.view');
 $r->get('/api/finance/statement',         [FinanceController::class, 'statement'],          'finance.view');
+$r->get('/api/finance/sst-summary',       [FinanceController::class, 'sstSummary'],         'finance.view');
 $r->get('/api/finance/payables',          [FinanceController::class, 'payables'],           'finance.view');
 $r->post('/api/finance/payables',         [FinanceController::class, 'createInvoice'],      'finance.manage');
 $r->post('/api/finance/payables/{id}/pay',[FinanceController::class, 'payInvoice'],         'finance.manage');
@@ -131,6 +134,15 @@ $r->get('/api/replenishment/{id}',         [ReplenishmentController::class, 'sho
 $r->post('/api/replenishment/{id}/approve',[ReplenishmentController::class, 'approve'], 'procurement.manage');
 $r->post('/api/replenishment/{id}/reject', [ReplenishmentController::class, 'reject'],  'procurement.manage');
 $r->post('/api/replenishment/{id}/fulfil', [ReplenishmentController::class, 'fulfil'],  'procurement.manage');
+
+// ---- API: e-invoicing (LHDN MyInvois) -------------------------------------
+$r->get('/api/einvoice',                    [EInvoiceController::class, 'list'],     'finance.view');
+$r->get('/api/einvoice/{id}',               [EInvoiceController::class, 'show'],     'finance.view');
+$r->get('/api/einvoice/{id}/qr',            [EInvoiceController::class, 'qr'],       'finance.view');
+$r->get('/api/einvoice/{id}/print',         [EInvoiceController::class, 'printDoc'], 'finance.view');
+$r->post('/api/einvoice/transaction/{id}',  [EInvoiceController::class, 'generateForTransaction'], 'finance.manage');
+$r->post('/api/einvoice/consolidated',      [EInvoiceController::class, 'generateConsolidated'],   'finance.manage');
+$r->post('/api/einvoice/{id}/submit',       [EInvoiceController::class, 'submit'],   'finance.manage');
 
 // ---- API: reconciliation ---------------------------------------------------
 $r->post('/api/reconciliation/import',  [ReconciliationController::class, 'import'],   'reconciliation.manage');

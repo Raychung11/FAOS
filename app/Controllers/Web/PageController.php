@@ -143,6 +143,16 @@ final class PageController extends Controller
         $this->view('finance.bankrecon', ['title' => 'Bank Reconciliation']);
     }
 
+    public function einvoicing(Request $req): void
+    {
+        Auth::requirePermission($req, 'finance.view');
+        $this->view('finance.einvoicing', [
+            'title'     => 'e-Invoicing (MyInvois)',
+            'canManage' => Auth::can('finance.manage'),
+            'outlets'   => $this->outletList(),
+        ]);
+    }
+
     public function procurement(Request $req): void
     {
         Auth::requirePermission($req, 'procurement.manage');

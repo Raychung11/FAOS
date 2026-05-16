@@ -32,6 +32,7 @@ run() { echo ""; echo ">>> $1"; bash "$DIR/$1" || fails=$((fails+1)); }
 reset_db; run base.sh;      run finance.sh
 reset_db; run bankrecon.sh
 reset_db; run supply.sh
+reset_db; run einvoice.sh
 
 echo ""; echo ">>> qr_test.php"
 php "$ROOT/tests/qr_test.php" || fails=$((fails+1))

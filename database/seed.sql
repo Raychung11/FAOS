@@ -130,6 +130,22 @@ INSERT INTO settings (company_id, skey, svalue) VALUES
  (1,'forecast_window_days','14'),
  (1,'recon_fee_pct','3.0'),            -- max acceptable MDR/fee band (% of gross)
  (1,'recon_date_window_days','3'),     -- bank settles 0-3 days after terminal batch
- (1,'recon_epsilon','0.50');           -- rounding tolerance (currency)
+ (1,'recon_epsilon','0.50'),           -- rounding tolerance (currency)
+ (1,'tax_inclusive','1'),              -- menu prices include SST (MY F&B norm)
+ (1,'einvoice_classification','022');  -- MyInvois default item classification
+
+-- Malaysian SST + e-invoice demo setup ---------------------------------------
+UPDATE companies
+   SET tin='C12345678901', sst_no='W10-1808-31000123', msic_code='56103',
+       einvoice_enabled=1
+ WHERE id=1;
+
+INSERT INTO tax_codes (id, company_id, code, name, tax_type, rate) VALUES
+ (1,1,'SR','Service Tax 6%','service',6.000),
+ (2,1,'ZR','Zero-rated','zero',0.000),
+ (3,1,'EX','Exempt','exempt',0.000);
+
+-- Prepared F&B sold to consumers is service-taxable; raw materials are not.
+UPDATE products SET tax_code_id=1 WHERE company_id=1 AND is_sellable=1;
 
 SET FOREIGN_KEY_CHECKS = 1;
