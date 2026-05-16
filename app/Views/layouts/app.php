@@ -25,11 +25,14 @@ $nav = fn (string $href, string $label) =>
       <?php endif; ?>
       <?php if ($can('sales.scan')): ?><?= $nav('/sales', '📷 QR Sales') ?><?php endif; ?>
       <?php if ($can('stock.scan')): ?><?= $nav('/stock', '📦 QR Stock') ?><?php endif; ?>
-      <?php if ($can('dashboard.outlet')): ?><?= $nav('/outlet', '🏪 Outlet Dashboard') ?><?php endif; ?>
-      <?php if ($can('dashboard.hq')): ?>
-        <div class="grp">Management</div>
-        <?= $nav('/hq', '📊 HQ Dashboard') ?>
+      <?php if ($can('dashboard.outlet')): ?>
+        <?= $nav('/outlet', $u['role_code'] === 'restaurant_manager' ? '🍽️ Restaurant Dashboard' : '🏪 Outlet Dashboard') ?>
       <?php endif; ?>
+      <?php if ($can('dashboard.hq') || $can('finance.view')): ?>
+        <div class="grp">Management</div>
+      <?php endif; ?>
+      <?php if ($can('dashboard.hq')): ?><?= $nav('/hq', '📊 HQ Dashboard') ?><?php endif; ?>
+      <?php if ($can('finance.view')): ?><?= $nav('/finance', '💰 Finance') ?><?php endif; ?>
       <?php if ($can('ai.view')): ?><?= $nav('/ai', '🤖 AI Forecasting') ?><?php endif; ?>
       <?php if ($can('reports.view')): ?><?= $nav('/reports', '📈 Reports') ?><?php endif; ?>
       <?php if ($can('reconciliation.manage')): ?><?= $nav('/reconciliation', '🔁 Reconciliation') ?><?php endif; ?>

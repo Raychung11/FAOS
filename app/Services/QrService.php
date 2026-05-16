@@ -36,6 +36,7 @@ final class QrService
     {
         return Database::first(
             'SELECT q.*, p.sku, p.name AS product_name, p.uom AS product_uom,
+                    p.cost_price AS product_cost,
                     b.batch_no, b.expiry_date, s.name AS supplier_name
              FROM qr_labels q
              JOIN products p ON p.id = q.product_id

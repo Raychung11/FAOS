@@ -56,6 +56,22 @@ final class ReconciliationController extends Controller
         });
 
         $variance = ReconciliationService::generate($reportId);
+
+        // The official amount becomes a receivable owed by the hypermarket
+        // (Accounts Receivable for the Accountant).
+        $officialTotal = (float) array_sum(array_map(
+            static fn ($l) => (float) ($l['amount'] ?? 0),
+            $lines
+        ));
+        \App\Services\FinanceService::upsertSettlementFromReport(
+            $this->companyId(),
+            (int) $d['outlet_id'],
+            $reportId,
+            $d['period_start'],
+            $d['period_end'],
+            $officialTotal
+        );
+
         Audit::log('reconcile_import', 'official_sales_reports', (string) $reportId);
         Response::ok(['report_id' => $reportId, 'variance' => $variance], 'Report imported & reconciled');
     }

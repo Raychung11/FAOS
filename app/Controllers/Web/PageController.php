@@ -16,9 +16,11 @@ final class PageController extends Controller
         Auth::requireLogin($req);
         $role = Auth::user()['role_code'];
         $target = match ($role) {
-            'worker'         => '/worker',
-            'outlet_manager' => '/outlet',
-            default          => '/hq',
+            'worker'             => '/worker',
+            'outlet_manager',
+            'restaurant_manager' => '/outlet',
+            'accountant'         => '/finance',
+            default              => '/hq',
         };
         Response::redirect(base_url($target));
     }
@@ -32,8 +34,9 @@ final class PageController extends Controller
     public function outletDashboard(Request $req): void
     {
         Auth::requirePermission($req, 'dashboard.outlet');
+        $isRestaurant = Auth::user()['role_code'] === 'restaurant_manager';
         $this->view('dashboard.outlet', [
-            'title' => 'Outlet Dashboard',
+            'title' => $isRestaurant ? 'Restaurant Dashboard' : 'Outlet Dashboard',
             'outlets' => $this->outletList(),
         ]);
     }
@@ -114,21 +117,37 @@ final class PageController extends Controller
     public function reconciliation(Request $req): void
     {
         Auth::requirePermission($req, 'reconciliation.manage');
+        // Only hypermarket kiosk hubs get delayed 3rd-party reports;
+        // restaurants own their POS and need no reconciliation.
         $this->view('reports.reconciliation', [
             'title'   => 'Sales Reconciliation',
-            'outlets' => $this->outletList(),
+            'outlets' => $this->outletList(true),
         ]);
     }
 
-    private function outletList(): array
+    public function finance(Request $req): void
+    {
+        Auth::requirePermission($req, 'finance.view');
+        $this->view('finance.index', [
+            'title'     => 'Finance',
+            'suppliers' => Database::all(
+                'SELECT id, code, name FROM suppliers WHERE company_id = ? AND is_active = 1 ORDER BY name',
+                [$this->companyId()]
+            ),
+        ]);
+    }
+
+    private function outletList(bool $kioskHubOnly = false): array
     {
         $u = Auth::user();
         if ($u['outlet_id']) {
             return Database::all('SELECT id, name FROM outlets WHERE id = ?', [$u['outlet_id']]);
         }
-        return Database::all(
-            'SELECT id, name FROM outlets WHERE company_id = ? AND is_active = 1 ORDER BY name',
-            [$u['company_id']]
-        );
+        $sql = 'SELECT id, name FROM outlets WHERE company_id = ? AND is_active = 1';
+        if ($kioskHubOnly) {
+            $sql .= " AND outlet_type = 'kiosk_hub'";
+        }
+        $sql .= ' ORDER BY name';
+        return Database::all($sql, [$u['company_id']]);
     }
 }

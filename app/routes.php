@@ -11,6 +11,7 @@ use App\Controllers\Api\SalesController;
 use App\Controllers\Api\DashboardController;
 use App\Controllers\Api\ReportController;
 use App\Controllers\Api\ReconciliationController;
+use App\Controllers\Api\FinanceController;
 
 /** @var Router $r */
 $r = new Router();
@@ -32,6 +33,7 @@ $r->get('/qr-labels', [PageController::class, 'qrLabels']);
 $r->get('/master/{resource}', [PageController::class, 'masterData']);
 $r->get('/reports',   [PageController::class, 'reports']);
 $r->get('/reconciliation', [PageController::class, 'reconciliation']);
+$r->get('/finance',   [PageController::class, 'finance']);
 
 // ---- API: session / identity ----------------------------------------------
 $r->get('/api/me', [MasterDataController::class, 'me']);
@@ -77,6 +79,15 @@ $r->get('/api/reports/sales',              [ReportController::class, 'sales'],  
 $r->get('/api/reports/stock-movement',     [ReportController::class, 'stockMovement'],    'reports.view');
 $r->get('/api/reports/wastage',            [ReportController::class, 'wastage'],          'reports.view');
 $r->get('/api/reports/worker-performance', [ReportController::class, 'workerPerformance'],'reports.view');
+
+// ---- API: finance (Accountant) --------------------------------------------
+$r->get('/api/finance/summary',           [FinanceController::class, 'summary'],            'finance.view');
+$r->get('/api/finance/statement',         [FinanceController::class, 'statement'],          'finance.view');
+$r->get('/api/finance/payables',          [FinanceController::class, 'payables'],           'finance.view');
+$r->post('/api/finance/payables',         [FinanceController::class, 'createInvoice'],      'finance.manage');
+$r->post('/api/finance/payables/{id}/pay',[FinanceController::class, 'payInvoice'],         'finance.manage');
+$r->get('/api/finance/receivables',       [FinanceController::class, 'receivables'],        'finance.view');
+$r->post('/api/finance/receivables/{id}/receive', [FinanceController::class, 'receiveSettlement'], 'finance.manage');
 
 // ---- API: reconciliation ---------------------------------------------------
 $r->post('/api/reconciliation/import',  [ReconciliationController::class, 'import'],   'reconciliation.manage');

@@ -45,11 +45,12 @@ CREATE TABLE outlets (
   company_id      BIGINT UNSIGNED NOT NULL,
   code            VARCHAR(32)  NOT NULL,
   name            VARCHAR(160) NOT NULL,
-  hypermarket     VARCHAR(160) NULL,           -- e.g. AEON, Lotus's, Mydin
+  outlet_type     ENUM('kiosk_hub','restaurant') NOT NULL DEFAULT 'kiosk_hub',
+  hypermarket     VARCHAR(160) NULL,           -- e.g. AEON, Lotus's, Mydin (kiosk_hub only)
   region          VARCHAR(96)  NULL,
   address         VARCHAR(255) NULL,
-  third_party_pos TINYINT(1)   NOT NULL DEFAULT 1,  -- sales report received late
-  report_lag_days SMALLINT     NOT NULL DEFAULT 21,  -- 3-4 weeks
+  third_party_pos TINYINT(1)   NOT NULL DEFAULT 1,  -- 1=delayed hypermarket report; 0=own POS (restaurant)
+  report_lag_days SMALLINT     NOT NULL DEFAULT 21,  -- 3-4 weeks; 0 for restaurants
   is_active       TINYINT(1)   NOT NULL DEFAULT 1,
   created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -714,6 +715,94 @@ CREATE TABLE settings (
   svalue          TEXT         NULL,
   PRIMARY KEY (id),
   UNIQUE KEY uq_settings (company_id, skey)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- ----------------------------------------------------------------------------
+-- 9. OPERATIONAL FINANCE (Accountant) - AP / AR. No double-entry GL.
+-- ----------------------------------------------------------------------------
+
+-- Accounts Payable: supplier invoices + payments against them.
+CREATE TABLE supplier_invoices (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  supplier_id     BIGINT UNSIGNED NOT NULL,
+  po_id           BIGINT UNSIGNED NULL,
+  grn_id          BIGINT UNSIGNED NULL,
+  invoice_no      VARCHAR(64)  NOT NULL,
+  invoice_date    DATE         NOT NULL,
+  due_date        DATE         NULL,
+  amount          DECIMAL(14,2) NOT NULL DEFAULT 0,
+  tax_amount      DECIMAL(14,2) NOT NULL DEFAULT 0,
+  total_amount    DECIMAL(14,2) NOT NULL DEFAULT 0,
+  paid_amount     DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status          ENUM('unpaid','partial','paid') NOT NULL DEFAULT 'unpaid',
+  note            VARCHAR(255) NULL,
+  created_by      BIGINT UNSIGNED NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_sinv (company_id, supplier_id, invoice_no),
+  KEY idx_sinv_status (status, due_date),
+  CONSTRAINT fk_sinv_company  FOREIGN KEY (company_id)  REFERENCES companies(id),
+  CONSTRAINT fk_sinv_supplier FOREIGN KEY (supplier_id) REFERENCES suppliers(id),
+  CONSTRAINT fk_sinv_po       FOREIGN KEY (po_id)       REFERENCES purchase_orders(id),
+  CONSTRAINT fk_sinv_grn      FOREIGN KEY (grn_id)      REFERENCES grn(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE supplier_payments (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  supplier_invoice_id BIGINT UNSIGNED NOT NULL,
+  amount          DECIMAL(14,2) NOT NULL,
+  method          ENUM('cash','bank','cheque','ewallet') NOT NULL DEFAULT 'bank',
+  reference       VARCHAR(96)  NULL,
+  paid_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  user_id         BIGINT UNSIGNED NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_spay_inv (supplier_invoice_id),
+  CONSTRAINT fk_spay_company FOREIGN KEY (company_id) REFERENCES companies(id),
+  CONSTRAINT fk_spay_inv     FOREIGN KEY (supplier_invoice_id) REFERENCES supplier_invoices(id) ON DELETE CASCADE,
+  CONSTRAINT fk_spay_user    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- Accounts Receivable: amounts owed by hypermarkets, recognised when an
+-- official (delayed) report is imported & reconciled, settled when paid.
+CREATE TABLE ar_settlements (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  outlet_id       BIGINT UNSIGNED NOT NULL,
+  report_id       BIGINT UNSIGNED NULL,
+  period_start    DATE         NOT NULL,
+  period_end      DATE         NOT NULL,
+  expected_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  received_amount DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status          ENUM('pending','partial','settled') NOT NULL DEFAULT 'pending',
+  note            VARCHAR(255) NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_ars_outlet (outlet_id, status),
+  CONSTRAINT fk_ars_company FOREIGN KEY (company_id) REFERENCES companies(id),
+  CONSTRAINT fk_ars_outlet  FOREIGN KEY (outlet_id)  REFERENCES outlets(id),
+  CONSTRAINT fk_ars_report  FOREIGN KEY (report_id)  REFERENCES official_sales_reports(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ar_receipts (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  settlement_id   BIGINT UNSIGNED NOT NULL,
+  amount          DECIMAL(14,2) NOT NULL,
+  method          ENUM('cash','bank','cheque','ewallet') NOT NULL DEFAULT 'bank',
+  reference       VARCHAR(96)  NULL,
+  received_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  user_id         BIGINT UNSIGNED NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_arr_set (settlement_id),
+  CONSTRAINT fk_arr_company FOREIGN KEY (company_id) REFERENCES companies(id),
+  CONSTRAINT fk_arr_set     FOREIGN KEY (settlement_id) REFERENCES ar_settlements(id) ON DELETE CASCADE,
+  CONSTRAINT fk_arr_user    FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET FOREIGN_KEY_CHECKS = 1;

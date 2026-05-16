@@ -53,8 +53,16 @@ Open `http://localhost:8080`.
 | User | Login | Role |
 |------|-------|------|
 | Super Admin | `admin` / `admin123` | full access |
-| Outlet Manager | `manager` / `manager123` | outlet ops + reports |
+| Kiosk-Hub Manager | `manager` / `manager123` | hypermarket kiosk ops + reports |
 | Kiosk Worker | `worker1` / `worker123` (PIN `1234`) | QR sales + stock only |
+| Restaurant Manager | `rmanager` / `manager123` | restaurant ops + reports |
+| Restaurant Worker | `rworker` / `worker123` (PIN `1234`) | QR sales + stock only |
+| Accountant | `acc` / `acc123` | company finance: AP / AR / P&L |
+
+Caffeinees runs **both hypermarket kiosks and restaurants**. Kiosk hubs depend
+on delayed 3rd-party POS reports (reconciled later); restaurants own their till
+so their QR sales are real-time with no reconciliation. Both use the same QR
+sales/stock screens.
 
 Run the QR encoder conformance test: `php tests/qr_test.php`.
 
@@ -102,6 +110,12 @@ Every request: `index.php` → `Router` (CSRF + RBAC) → Controller → Service
 **Phase 3 (implemented services)** — AI forecasting (weighted moving average +
 day-of-week seasonality, AI narrative when a provider key is set), delayed-report
 **reconciliation engine**, anomaly detection, purchase recommendation.
+
+**Operational Finance (Accountant)** — Accounts Payable (supplier invoices +
+payments with aging), Accounts Receivable (hypermarket settlements auto-created
+when a delayed report is reconciled), and a P&L summary (revenue, COGS, wastage
+cost, gross profit/margin) by period and account group, with CSV + printable
+(browser→PDF) statement. No double-entry ledger by design.
 
 ---
 

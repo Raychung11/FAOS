@@ -1,9 +1,12 @@
 -- ============================================================================
 -- FAOS - seed / demo data
 -- Default logins:
---   admin   / admin123    (super_admin, HQ)
---   manager / manager123  (outlet_manager, Outlet 1)
---   worker1 / worker123    PIN 1234  (worker, Kiosk 1)
+--   admin    / admin123    (super_admin, HQ)
+--   manager  / manager123  (outlet_manager, AEON kiosk hub)
+--   worker1  / worker123    PIN 1234  (worker, Kiosk 1)
+--   rmanager / manager123  (restaurant_manager, Bangsar restaurant)
+--   rworker  / worker123    PIN 1234  (worker, Bangsar restaurant)
+--   acc      / acc123       (accountant, company finance)
 -- ============================================================================
 
 SET FOREIGN_KEY_CHECKS = 0;
@@ -12,10 +15,12 @@ INSERT INTO companies (id, code, name, reg_no, currency, timezone) VALUES
  (1, 'C001', 'Caffeinees F&B Sdn Bhd', '202301000001', 'MYR', 'Asia/Kuala_Lumpur');
 
 INSERT INTO roles (id, code, name, description) VALUES
- (1, 'super_admin',   'Super Admin',     'Full system access'),
- (2, 'hq_manager',    'HQ Manager',      'HQ dashboards + master data'),
- (3, 'outlet_manager','Outlet Manager',  'Outlet operations + reports'),
- (4, 'worker',        'Kiosk Worker',    'QR sales + stock scan only');
+ (1, 'super_admin',       'Super Admin',        'Full system access'),
+ (2, 'hq_manager',        'HQ Manager',         'HQ dashboards + master data'),
+ (3, 'outlet_manager',    'Outlet Manager',     'Kiosk-hub operations + reports'),
+ (4, 'worker',            'Kiosk Worker',       'QR sales + stock scan only'),
+ (5, 'restaurant_manager','Restaurant Manager', 'Restaurant operations + reports'),
+ (6, 'accountant',        'Accountant',         'Company finance: AP, AR, P&L');
 
 INSERT INTO permissions (id, code, name, module) VALUES
  (1,'masterdata.manage','Manage master data','masterdata'),
@@ -32,28 +37,37 @@ INSERT INTO permissions (id, code, name, module) VALUES
  (12,'dashboard.worker','Worker dashboard','dashboard'),
  (13,'ai.view','AI dashboard','ai'),
  (14,'admin.users','Manage users/roles','admin'),
- (15,'qr.print','Generate / print QR labels','qr');
+ (15,'qr.print','Generate / print QR labels','qr'),
+ (16,'finance.view','View finance (AP/AR/P&L)','finance'),
+ (17,'finance.manage','Manage invoices / payments / receipts','finance');
 
 -- super_admin: everything
 INSERT INTO role_permissions (role_id, permission_id)
   SELECT 1, id FROM permissions;
--- hq_manager
+-- hq_manager (+ finance read)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
- (2,1),(2,3),(2,5),(2,6),(2,7),(2,8),(2,9),(2,10),(2,11),(2,13),(2,15);
--- outlet_manager
+ (2,1),(2,3),(2,5),(2,6),(2,7),(2,8),(2,9),(2,10),(2,11),(2,13),(2,15),(2,16);
+-- outlet_manager (hypermarket kiosk hub)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
  (3,2),(3,3),(3,4),(3,5),(3,8),(3,11),(3,12),(3,15);
 -- worker
 INSERT INTO role_permissions (role_id, permission_id) VALUES
  (4,2),(4,4),(4,12);
+-- restaurant_manager (same operational scope, restaurant outlet)
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+ (5,2),(5,3),(5,4),(5,5),(5,8),(5,11),(5,12),(5,15);
+-- accountant (company finance + reports + reconciliation/AR)
+INSERT INTO role_permissions (role_id, permission_id) VALUES
+ (6,8),(6,9),(6,16),(6,17);
 
 INSERT INTO warehouses (id, company_id, code, name, type) VALUES
  (1,1,'CK01','Central Kitchen - Shah Alam','central_kitchen'),
  (2,1,'WH01','Main Warehouse','warehouse');
 
-INSERT INTO outlets (id, company_id, code, name, hypermarket, region, third_party_pos, report_lag_days) VALUES
- (1,1,'OUT01','AEON Mid Valley Kiosk Hub','AEON','Klang Valley',1,21),
- (2,1,'OUT02','Lotus''s Cheras Kiosk Hub','Lotus''s','Klang Valley',1,28);
+INSERT INTO outlets (id, company_id, code, name, outlet_type, hypermarket, region, third_party_pos, report_lag_days) VALUES
+ (1,1,'OUT01','AEON Mid Valley Kiosk Hub','kiosk_hub','AEON','Klang Valley',1,21),
+ (2,1,'OUT02','Lotus''s Cheras Kiosk Hub','kiosk_hub','Lotus''s','Klang Valley',1,28),
+ (3,1,'OUT03','Caffeinees Restaurant - Bangsar','restaurant',NULL,'Klang Valley',0,0);
 
 INSERT INTO kiosks (id, outlet_id, code, name, location_note) VALUES
  (1,1,'K001','AEON MV - Ground Floor','Near main entrance'),
@@ -100,11 +114,15 @@ INSERT INTO recipe_items (recipe_id, ingredient_id, qty, uom) VALUES
 -- Users (passwords noted in header) -----------------------------------------
 INSERT INTO users (id, company_id, role_id, outlet_id, kiosk_id, username, full_name, email, password_hash, pin_hash) VALUES
  (1,1,1,NULL,NULL,'admin','System Administrator','admin@caffeinees.test','$2y$12$.9/K0Ycds16/XuKwYtXrcegfkZQKka2tb5WHePqas5tx9vxbr3pbG',NULL),
- (2,1,3,1,NULL,'manager','Outlet Manager 1','mgr1@caffeinees.test','$2y$12$rFMU//EDqiwWW/6N5Ol0Nu/roNq94d.QinW/aveXhGPBRoOVjaksy',NULL),
- (3,1,4,1,1,'worker1','Kiosk Worker 1','worker1@caffeinees.test','$2y$12$iwd.35R8CCBbuK8mTM6D0.cyOZfpwSuT6k91xfYtDxWD3uZOcUcU2','$2y$12$J2XST2jNSAm05N136.QkOuRtQxgFhJwaAyq9wMp6S1bOqKG5ITOMS');
+ (2,1,3,1,NULL,'manager','Kiosk-Hub Manager','mgr1@caffeinees.test','$2y$12$rFMU//EDqiwWW/6N5Ol0Nu/roNq94d.QinW/aveXhGPBRoOVjaksy',NULL),
+ (3,1,4,1,1,'worker1','Kiosk Worker 1','worker1@caffeinees.test','$2y$12$iwd.35R8CCBbuK8mTM6D0.cyOZfpwSuT6k91xfYtDxWD3uZOcUcU2','$2y$12$J2XST2jNSAm05N136.QkOuRtQxgFhJwaAyq9wMp6S1bOqKG5ITOMS'),
+ (4,1,5,3,NULL,'rmanager','Restaurant Manager','rmgr@caffeinees.test','$2y$12$rFMU//EDqiwWW/6N5Ol0Nu/roNq94d.QinW/aveXhGPBRoOVjaksy',NULL),
+ (5,1,6,NULL,NULL,'acc','Company Accountant','acc@caffeinees.test','$2y$12$MogqB1ZImVSzb01EKASBmeZPfvzjVnrU0YWYyYM1ZIc5qR83AMTZ.',NULL),
+ (6,1,4,3,NULL,'rworker','Restaurant Worker 1','rworker@caffeinees.test','$2y$12$iwd.35R8CCBbuK8mTM6D0.cyOZfpwSuT6k91xfYtDxWD3uZOcUcU2','$2y$12$J2XST2jNSAm05N136.QkOuRtQxgFhJwaAyq9wMp6S1bOqKG5ITOMS');
 
 INSERT INTO workers (id, user_id, outlet_id, kiosk_id, staff_no, hired_at) VALUES
- (1,3,1,1,'EMP-0001','2025-01-15');
+ (1,3,1,1,'EMP-0001','2025-01-15'),
+ (2,6,3,NULL,'EMP-0002','2025-03-01');
 
 INSERT INTO settings (company_id, skey, svalue) VALUES
  (1,'low_stock_threshold_pct','20'),
