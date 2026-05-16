@@ -96,6 +96,48 @@ function ai_complete(string $system, string $user, string $feature, string $stub
     }
 }
 
+/**
+ * Split a generated proposal draft into its four narrative sections.
+ * Tolerant of `#`/`##`/`###`, optional numbering and trailing colons.
+ * Anything before the first header (or all of it, if no headers) falls
+ * back to the executive summary. The disclaimer block is dropped.
+ *
+ * @return array{executive_summary:string,current_gaps:string,recommendations:string,action_plan:string}
+ */
+function ai_split_sections(string $text): array
+{
+    $text = preg_split('/\n\s*(?:(?:—|–)\s*){3,}\s*\n|\n\s*-{3,}\s*\n/u', $text, 2)[0];
+    $map  = [
+        'EXECUTIVE SUMMARY' => 'executive_summary',
+        'CURRENT GAPS'      => 'current_gaps',
+        'RECOMMENDATIONS'   => 'recommendations',
+        'ACTION PLAN'       => 'action_plan',
+    ];
+    $out  = array_fill_keys(array_values($map), '');
+
+    $parts = preg_split(
+        '/^[ \t]*#{0,6}[ \t]*\*{0,2}[ \t]*\d*\.?[ \t]*'
+        . '(EXECUTIVE SUMMARY|CURRENT GAPS|RECOMMENDATIONS|ACTION PLAN)'
+        . '[ \t]*\*{0,2}[ \t]*:?[ \t]*$/im',
+        $text, -1, PREG_SPLIT_DELIM_CAPTURE
+    );
+
+    if (count($parts) <= 1) {
+        $out['executive_summary'] = trim($text);
+        return $out;
+    }
+    if (trim((string) $parts[0]) !== '') {
+        $out['executive_summary'] = trim((string) $parts[0]);
+    }
+    for ($i = 1; $i < count($parts); $i += 2) {
+        $key = $map[strtoupper(trim($parts[$i]))] ?? null;
+        if ($key !== null) {
+            $out[$key] = trim((string) ($parts[$i + 1] ?? ''));
+        }
+    }
+    return $out;
+}
+
 /** @return array{0:string,1:string,2:?int} [text, model, tokens] */
 function ai_call_anthropic(string $system, string $user): array
 {

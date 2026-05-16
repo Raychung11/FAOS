@@ -137,6 +137,27 @@ try {
         'r_medins'=>0.0,'r_sspn'=>0.0,'r_medical'=>0.0,'r_spouse'=>0.0,
     ])]);
 
+    // --- Advisory skills library (settings k/v) ------------------
+    $pdo->prepare(
+        'INSERT INTO settings (tenant_id,setting_key,setting_value)
+         VALUES (?,?,?)
+         ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)'
+    )->execute([$tenantId,'advisory_skills', json_encode([
+        ['id'=>1,'title'=>'Protection-gap closing approach','category'=>'Protection',
+         'body'=>"When coverage is below ~10x annual income, frame the shortfall in "
+             ."ringgit and months-of-income terms. Sequence: income protection first, "
+             ."then critical illness, then medical. Always tie the recommended sum "
+             ."assured back to the client's stated dependants and liabilities. Present "
+             ."options, not a single product.",
+         'active'=>true,'author'=>'Demo Advisor','updated_at'=>date('Y-m-d H:i')],
+        ['id'=>2,'title'=>'Leverage & tax-efficiency play','category'=>'Tax',
+         'body'=>"If the client is under-leveraged with unused tax reliefs, link the "
+             ."two: e.g. PRS/SSPN top-ups reduce tax while advancing retirement and "
+             ."education goals. If over-leveraged, prioritise DSR reduction before any "
+             ."new commitment. Never present tax savings as the sole rationale.",
+         'active'=>true,'author'=>'Demo Advisor','updated_at'=>date('Y-m-d H:i')],
+    ])]);
+
     // --- Risk profile --------------------------------------------
     $pdo->prepare(
         'INSERT INTO risk_profiles

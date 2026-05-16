@@ -2,6 +2,9 @@
 /** AdvisorOS — Create / edit an advisory proposal. */
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
+require_once __DIR__ . '/../includes/ai.php';
+require_once __DIR__ . '/../includes/insight.php';
+require_once __DIR__ . '/../includes/skills.php';
 require_permission('proposals.manage');
 
 $tid = require_tenant();
@@ -58,7 +61,94 @@ if ($fin) {
 }
 $suggestedGaps = implode("\n", $suggested);
 
-if (is_post()) {
+// Current field values: existing proposal, AI draft, or seeded gaps.
+$draft = [
+    'executive_summary' => $existing['executive_summary'] ?? '',
+    'current_gaps'      => $existing['current_gaps'] ?? $suggestedGaps,
+    'recommendations'   => $existing['recommendations'] ?? '',
+    'action_plan'       => $existing['action_plan'] ?? '',
+];
+$title       = $proposal['title'] ?? ('Advisory Proposal — ' . $client['full_name']);
+$activeSkills = skills_active();
+$pickedSkills = [];
+$aiResult    = null;
+
+// --- "Draft with AI": fill the narrative, do NOT save ------------
+if (is_post() && isset($_POST['ai_draft'])) {
+    csrf_check();
+    $title        = (string) input('title', '') ?: $title;
+    $pickedSkills = array_map('intval', (array) ($_POST['skills'] ?? []));
+
+    $cap = capability_summary($pdo, $tid, $clientId);
+    $tax = tax_summary($pdo, $tid, $clientId);
+
+    $facts = "Client: {$client['full_name']}\n"
+        . 'Occupation: ' . ($client['occupation'] ?: 'n/a')
+        . ', marital: ' . label($client['marital_status'])
+        . ', dependents: ' . (int) $client['dependents'] . "\n"
+        . 'Risk appetite: ' . label($risk['classification'] ?? $client['risk_appetite']) . "\n"
+        . 'Goals: ' . ($client['financial_goals'] ?: 'n/a') . "\n";
+    if ($fin) {
+        $facts .= 'Financial health: ' . (int) $fin['health_score'] . "/100; "
+            . 'income/expenses RM ' . money($fin['monthly_income']) . ' / RM ' . money($fin['monthly_expenses']) . "; "
+            . 'assets/liabilities RM ' . money($fin['total_assets']) . ' / RM ' . money($fin['total_liabilities']) . "; "
+            . 'insurance RM ' . money($fin['insurance_coverage']) . "; "
+            . 'emergency fund RM ' . money($fin['emergency_fund']) . "\n";
+    }
+    if ($cap) { $facts .= $cap['text'] . "\n"; }
+    if ($tax) { $facts .= $tax['text'] . "\n"; }
+
+    $skillBlock = '';
+    foreach ($activeSkills as $s) {
+        if (in_array((int) $s['id'], $pickedSkills, true)) {
+            $skillBlock .= "\n• {$s['title']}"
+                . (!empty($s['category']) ? " [{$s['category']}]" : '') . ":\n"
+                . $s['body'] . "\n";
+        }
+    }
+
+    $system = 'You are an assistant for a licensed financial advisory firm in '
+        . 'Malaysia. Be concise, professional and factual. Frame all '
+        . 'recommendations as points for the licensed advisor to review — never '
+        . 'as final advice. Never invent figures beyond those provided. Output '
+        . 'EXACTLY these four sections, each on its own line as a header with no '
+        . 'extra commentary before or after:\n'
+        . "## EXECUTIVE SUMMARY\n## CURRENT GAPS\n## RECOMMENDATIONS\n## ACTION PLAN"
+        . ($skillBlock !== ''
+            ? "\n\nApply the firm's advisory skills below where relevant:\n" . $skillBlock
+            : '');
+
+    $user = "Draft an advisory proposal narrative for this client using the four "
+        . "required sections.\n\nCLIENT CONTEXT:\n{$facts}\n"
+        . "SUGGESTED GAPS (validate, refine, expand):\n{$suggestedGaps}";
+
+    $stub = "## EXECUTIVE SUMMARY\n{$client['full_name']} is reviewed across "
+        . "protection, cash flow, leverage and long-term goals based on the "
+        . "latest snapshot.\n\n## CURRENT GAPS\n{$suggestedGaps}\n"
+        . ($cap ? $cap['text'] . "\n" : '') . ($tax ? $tax['text'] . "\n" : '')
+        . "\n## RECOMMENDATIONS\n- Address the gaps above in priority order "
+        . "(for advisor review).\n"
+        . ($cap && $cap['status'] === 'Over-leveraged'
+            ? "- Reduce monthly debt commitments toward the DSR cap.\n"
+            : ($cap && $cap['status'] === 'Under-leveraged'
+                ? "- Unused borrowing capacity may responsibly fund priority goals.\n" : ''))
+        . ($tax && $tax['max_saving'] >= 1
+            ? "- Optimise eligible tax reliefs (largest lever: {$tax['top_label']}).\n" : '')
+        . "- Reconfirm risk profile and goals.\n\n## ACTION PLAN\n"
+        . "- Advisor to validate findings with the client.\n"
+        . "- Implement agreed recommendations before the next review ("
+        . fmt_date($client['next_review_date']) . ").";
+
+    $aiResult = ai_complete($system, $user, 'proposal_draft', $stub);
+    $sections = ai_split_sections($aiResult['text']);
+    foreach ($sections as $k => $val) {
+        if (trim((string) $val) !== '') { $draft[$k] = $val; }
+    }
+    audit_log('ai_generate', 'proposals', $id,
+        'Proposal draft' . ($aiResult['stubbed'] ? ' (data-driven)' : ' (' . $aiResult['model'] . ')'));
+}
+
+if (is_post() && !isset($_POST['ai_draft'])) {
     csrf_check();
     $title  = (string) input('title','') ?: ('Advisory Proposal — ' . $client['full_name']);
     $status = in_array(input('status'),$statuses,true) ? input('status') : 'draft';
@@ -127,7 +217,6 @@ if (is_post()) {
     redirect('advisor/proposal-view.php?id=' . $id);
 }
 
-$v = static fn (string $k, $d='') => e($existing[$k] ?? $d);
 $pageTitle = $id ? 'Edit Proposal' : 'Generate Proposal';
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -136,22 +225,61 @@ require __DIR__ . '/../includes/header.php';
     <a class="btn-os ghost sm" href="<?= e(url('advisor/client-view.php?id='.$clientId)) ?>">Back to client</a>
   </div>
   <div class="card-os-body">
-    <p class="muted" style="margin-top:0">Profile, financial snapshot and risk
-      profile are captured automatically. Write the advisory narrative below.</p>
+    <p class="muted" style="margin-top:0">Profile, financial snapshot, risk,
+      borrowing-capability and tax estimates are captured automatically. Use
+      “Draft with AI” to generate the narrative, then review and edit.</p>
+
+    <?php if ($aiResult): ?>
+      <div class="alert-os <?= !empty($aiResult['error']) ? 'warning' : 'info' ?>">
+        <?= !empty($aiResult['error'])
+              ? e($aiResult['error'])
+              : ($aiResult['stubbed']
+                  ? 'Data-driven draft inserted (no AI provider configured).'
+                  : 'AI draft inserted · model ' . e($aiResult['model'])
+                    . ($aiResult['tokens'] ? ' · ' . (int) $aiResult['tokens'] . ' tokens' : '')) ?>
+        — review and edit every section before saving.
+      </div>
+    <?php endif; ?>
+
     <form method="post">
       <?= csrf_field() ?>
       <div class="form-row"><label>Proposal title</label>
-        <input name="title" value="<?= e($proposal['title'] ?? ('Advisory Proposal — ' . $client['full_name'])) ?>"></div>
-      <div class="form-row"><label>1. Executive summary</label>
-        <textarea name="executive_summary" rows="3"><?= $v('executive_summary') ?></textarea></div>
-      <div class="form-row"><label>6. Current gaps
-        <?php if ($suggestedGaps && !$id): ?><span class="muted" style="font-weight:400">(suggested below — edit freely)</span><?php endif; ?>
+        <input name="title" value="<?= e($title) ?>"></div>
+
+      <div class="form-row">
+        <label>AI drafting
+          <span class="badge-os <?= ai_enabled() ? 'b-active' : 'b-warn' ?>"
+            style="font-size:11px"><?= ai_enabled() ? 'Live · ' . e(ai_provider()) : 'Offline draft' ?></span>
         </label>
-        <textarea name="current_gaps" rows="4"><?= e($existing['current_gaps'] ?? $suggestedGaps) ?></textarea></div>
+        <?php if ($activeSkills): ?>
+          <div class="muted" style="font-size:12px;margin:2px 0 6px">Apply firm advisory skills:</div>
+          <div style="display:flex;flex-wrap:wrap;gap:8px 16px">
+            <?php foreach ($activeSkills as $s): ?>
+              <label style="display:flex;gap:6px;align-items:center;font-weight:400">
+                <input type="checkbox" name="skills[]" value="<?= (int) $s['id'] ?>"
+                  <?= in_array((int) $s['id'], $pickedSkills, true) ? 'checked' : '' ?>>
+                <span><?= e($s['title']) ?></span></label>
+            <?php endforeach; ?>
+          </div>
+        <?php else: ?>
+          <div class="muted" style="font-size:12px">No active skills —
+            <a href="<?= e(url('advisor/skills.php')) ?>">build your skills library</a>
+            to steer the AI with house-style guidance.</div>
+        <?php endif; ?>
+        <button class="btn-os ghost sm" type="submit" name="ai_draft" value="1"
+          style="margin-top:10px">✦ Draft with AI</button>
+      </div>
+
+      <div class="form-row"><label>1. Executive summary</label>
+        <textarea name="executive_summary" rows="3"><?= e($draft['executive_summary']) ?></textarea></div>
+      <div class="form-row"><label>6. Current gaps
+        <?php if ($suggestedGaps && !$id): ?><span class="muted" style="font-weight:400">(seeded from data — edit freely)</span><?php endif; ?>
+        </label>
+        <textarea name="current_gaps" rows="4"><?= e($draft['current_gaps']) ?></textarea></div>
       <div class="form-row"><label>7. Recommendations</label>
-        <textarea name="recommendations" rows="4"><?= $v('recommendations') ?></textarea></div>
+        <textarea name="recommendations" rows="5"><?= e($draft['recommendations']) ?></textarea></div>
       <div class="form-row"><label>8. Action plan</label>
-        <textarea name="action_plan" rows="4"><?= $v('action_plan') ?></textarea></div>
+        <textarea name="action_plan" rows="4"><?= e($draft['action_plan']) ?></textarea></div>
       <div class="form-row" style="max-width:240px"><label>Status</label>
         <select name="status">
           <?php foreach ($statuses as $s): ?>
@@ -160,8 +288,10 @@ require __DIR__ . '/../includes/header.php';
         </select></div>
       <button class="btn-os gold"><?= $id ? 'Save proposal' : 'Generate proposal' ?></button>
     </form>
-    <div class="disclaimer">This is not financial advice. Final recommendations
-      must be reviewed and approved by a licensed financial advisor.</div>
+    <div class="disclaimer">This is not financial advice. AI output is a draft
+      from the client's own data and the firm's advisory skills; final
+      recommendations must be reviewed and approved by a licensed financial
+      advisor.</div>
   </div>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>
