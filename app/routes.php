@@ -17,6 +17,7 @@ use App\Controllers\Api\ProcurementController;
 use App\Controllers\Api\ProductionController;
 use App\Controllers\Api\ReplenishmentController;
 use App\Controllers\Api\EInvoiceController;
+use App\Controllers\Api\AdminUserController;
 
 /** @var Router $r */
 $r = new Router();
@@ -34,6 +35,7 @@ $r->get('/hq',        [PageController::class, 'hqDashboard']);
 $r->get('/ai',        [PageController::class, 'aiDashboard']);
 $r->get('/sales',     [PageController::class, 'salesScan']);
 $r->get('/sales-manage', [PageController::class, 'salesManage']);
+$r->get('/admin/users',  [PageController::class, 'adminUsers']);
 $r->get('/stock',     [PageController::class, 'stockScan']);
 $r->get('/qr-labels', [PageController::class, 'qrLabels']);
 $r->get('/master/{resource}', [PageController::class, 'masterData']);
@@ -48,6 +50,16 @@ $r->get('/einvoicing',   [PageController::class, 'einvoicing']);
 
 // ---- API: session / identity ----------------------------------------------
 $r->get('/api/me', [MasterDataController::class, 'me']);
+
+// ---- API: user & role administration --------------------------------------
+$r->get('/api/admin/users',              [AdminUserController::class, 'list'],          'admin.users');
+$r->get('/api/admin/roles',              [AdminUserController::class, 'roles'],         'admin.users');
+$r->get('/api/admin/users/{id}',         [AdminUserController::class, 'show'],          'admin.users');
+$r->post('/api/admin/users',             [AdminUserController::class, 'create'],        'admin.users');
+$r->put('/api/admin/users/{id}',         [AdminUserController::class, 'update'],        'admin.users');
+$r->post('/api/admin/users/{id}/password',[AdminUserController::class, 'resetPassword'],'admin.users');
+$r->post('/api/admin/users/{id}/pin',    [AdminUserController::class, 'setPin'],        'admin.users');
+$r->post('/api/admin/users/{id}/unlock', [AdminUserController::class, 'unlock'],        'admin.users');
 
 // ---- API: master data ------------------------------------------------------
 $r->get('/api/md/{resource}',        [MasterDataController::class, 'index'],  'masterdata.manage');

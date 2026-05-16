@@ -122,6 +122,9 @@ final class MasterDataController extends Controller
     public function me(Request $req): void
     {
         $u = Auth::user();
+        if (!$u) {
+            Response::fail('Unauthenticated', 401);
+        }
         Response::ok([
             'user' => [
                 'id' => $u['id'], 'name' => $u['full_name'], 'username' => $u['username'],

@@ -77,6 +77,23 @@ final class PageController extends Controller
         $this->view('sales.manage', ['title' => 'Sales Corrections']);
     }
 
+    public function adminUsers(Request $req): void
+    {
+        Auth::requirePermission($req, 'admin.users');
+        $this->view('admin.users', [
+            'title'   => 'Users & Roles',
+            'outlets' => Database::all(
+                'SELECT id, name FROM outlets WHERE company_id=? AND is_active=1 ORDER BY name',
+                [$this->companyId()]
+            ),
+            'kiosks'  => Database::all(
+                'SELECT k.id, k.name, k.outlet_id FROM kiosks k
+                 JOIN outlets o ON o.id=k.outlet_id WHERE o.company_id=? AND k.is_active=1',
+                [$this->companyId()]
+            ),
+        ]);
+    }
+
     public function stockScan(Request $req): void
     {
         Auth::requirePermission($req, 'stock.scan');
