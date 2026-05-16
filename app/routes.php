@@ -119,6 +119,9 @@ $r->get('/api/finance/summary',           [FinanceController::class, 'summary'],
 $r->get('/api/finance/statement',         [FinanceController::class, 'statement'],          'finance.view');
 $r->get('/api/finance/sst-summary',       [FinanceController::class, 'sstSummary'],         'finance.view');
 $r->get('/api/finance/inventory-valuation', [FinanceController::class, 'inventoryValuation'], 'finance.view');
+$r->get('/api/finance/periods',            [FinanceController::class, 'periods'],            'finance.view');
+$r->post('/api/finance/periods/close',     [FinanceController::class, 'closePeriod'],        'finance.manage');
+$r->post('/api/finance/periods/{id}/reopen',[FinanceController::class, 'reopenPeriod'],       'finance.manage');
 $r->get('/api/finance/payables',          [FinanceController::class, 'payables'],           'finance.view');
 $r->post('/api/finance/payables',         [FinanceController::class, 'createInvoice'],      'finance.manage');
 $r->post('/api/finance/payables/{id}/pay',[FinanceController::class, 'payInvoice'],         'finance.manage');

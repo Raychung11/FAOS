@@ -31,18 +31,22 @@ final class SalesController extends Controller
             Response::fail('Invalid payment_type', 422);
         }
 
-        $result = SalesService::record([
-            'company_id'  => $u['company_id'],
-            'outlet_id'   => $u['outlet_id'] ?? $req->input('outlet_id'),
-            'kiosk_id'    => $u['kiosk_id'] ?? $req->input('kiosk_id'),
-            'user_id'     => $u['id'],
-            'payment_type' => $payment,
-            'client_uuid' => $req->input('client_uuid'),
-            'device_id'   => $req->deviceId(),
-            'source'      => $req->input('source', 'qr_scan'),
-            'sold_at'     => $req->input('sold_at'),
-            'items'       => $items,
-        ]);
+        try {
+            $result = SalesService::record([
+                'company_id'  => $u['company_id'],
+                'outlet_id'   => $u['outlet_id'] ?? $req->input('outlet_id'),
+                'kiosk_id'    => $u['kiosk_id'] ?? $req->input('kiosk_id'),
+                'user_id'     => $u['id'],
+                'payment_type' => $payment,
+                'client_uuid' => $req->input('client_uuid'),
+                'device_id'   => $req->deviceId(),
+                'source'      => $req->input('source', 'qr_scan'),
+                'sold_at'     => $req->input('sold_at'),
+                'items'       => $items,
+            ]);
+        } catch (\RuntimeException $e) {
+            Response::fail($e->getMessage(), 422);
+        }
 
         if ($result['duplicate']) {
             Response::ok(['transaction' => $result['transaction'], 'duplicate' => true], 'Already recorded');

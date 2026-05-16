@@ -11,6 +11,7 @@
     <button class="btn ghost tab" data-tab="ap">Payables</button>
     <button class="btn ghost tab" data-tab="ar">Receivables</button>
     <button class="btn ghost tab" data-tab="stock">Stock Value</button>
+    <button class="btn ghost tab" data-tab="periods">Periods</button>
   </div>
 </div></div>
 
@@ -64,6 +65,21 @@
   <p class="muted mt" style="font-size:13px">Negative rows indicate stock issued without recorded receipts (QR sales without stock-in) — investigate or stock-take.</p>
 </section>
 
+<section id="periods" class="hidden">
+  <div class="card mb"><div class="hd">Close an accounting period</div><div class="bd row">
+    <div><label>Period start</label><input id="pc-from" type="date"></div>
+    <div><label>Period end</label><input id="pc-to" type="date"></div>
+    <div><label>Note</label><input id="pc-note" placeholder="e.g. May 2026 month-end"></div>
+    <div style="display:flex;align-items:flex-end"><button class="btn danger" id="pc-close">🔒 Close period</button></div>
+  </div></div>
+  <div class="card"><div class="hd">Accounting Periods</div>
+    <div class="bd" style="overflow:auto"><table>
+      <thead><tr><th>Period</th><th>Status</th><th>Closed by</th><th>Note</th><th></th></tr></thead>
+      <tbody id="pc-body"><tr><td class="muted">Loading…</td></tr></tbody></table></div>
+  </div>
+  <p class="muted mt" style="font-size:13px">A closed period rejects backdated sales, voids and refunds within its dates. Delayed hypermarket reconciliation imports are intentionally <b>not</b> blocked (reports arrive weeks late).</p>
+</section>
+
 <script>
 const CANW = <?= json_encode(\App\Core\Auth::can('finance.manage')) ?>;
 function qs() {
@@ -73,10 +89,37 @@ function qs() {
   return p;
 }
 function tab(name) {
-  ['pnl','ap','ar','stock'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== name));
+  ['pnl','ap','ar','stock','periods'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== name));
   if (name === 'ap') loadAP(); if (name === 'ar') loadAR();
   if (name === 'pnl') loadPnl(); if (name === 'stock') loadStock();
+  if (name === 'periods') loadPeriods();
 }
+async function loadPeriods() {
+  try {
+    const { data } = await FAOS.get('/api/finance/periods');
+    document.getElementById('pc-body').innerHTML = data.length ? data.map(p => `
+      <tr><td>${FAOS.esc(p.period_start)} → ${FAOS.esc(p.period_end)}</td>
+      <td><span class="badge ${p.status==='closed'?'b-dng':'b-ok'}">${FAOS.esc(p.status)}</span></td>
+      <td>${FAOS.esc(p.closed_by_name||'—')}</td><td>${FAOS.esc(p.note||'')}</td>
+      <td class="right">${CANW && p.status==='closed' ? `<button class="btn ghost" data-reopen="${p.id}" style="padding:5px 10px">Reopen</button>`:''}</td></tr>`).join('')
+      : '<tr><td class="muted">No periods closed yet</td></tr>';
+  } catch (e) { FAOS.toast(e.message, 'err'); }
+}
+document.getElementById('pc-close').addEventListener('click', async () => {
+  const s = document.getElementById('pc-from').value, e = document.getElementById('pc-to').value;
+  if (!s || !e) return FAOS.toast('Pick a start and end date', 'err');
+  if (!confirm('Close ' + s + ' → ' + e + '? Backdated sales/voids/refunds will be rejected.')) return;
+  try { await FAOS.post('/api/finance/periods/close', { period_start: s, period_end: e, note: document.getElementById('pc-note').value });
+    FAOS.toast('Period closed', 'ok'); loadPeriods();
+  } catch (x) { FAOS.toast(x.message, 'err'); }
+});
+document.getElementById('pc-body').addEventListener('click', async e => {
+  const b = e.target.closest('[data-reopen]'); if (!b) return;
+  if (!confirm('Reopen this period?')) return;
+  try { await FAOS.post('/api/finance/periods/' + b.dataset.reopen + '/reopen', {});
+    FAOS.toast('Period reopened', 'ok'); loadPeriods();
+  } catch (x) { FAOS.toast(x.message, 'err'); }
+});
 async function loadStock() {
   try {
     const { data } = await FAOS.get('/api/finance/inventory-valuation');

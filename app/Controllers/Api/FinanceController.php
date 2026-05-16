@@ -10,6 +10,7 @@ use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
 use App\Services\FinanceService;
+use App\Services\PeriodService;
 
 final class FinanceController extends Controller
 {
@@ -65,6 +66,45 @@ final class FinanceController extends Controller
     public function inventoryValuation(Request $req): void
     {
         Response::ok(FinanceService::inventoryValuation($this->companyId()));
+    }
+
+    // ---- Accounting period close / lock -----------------------------------
+
+    public function periods(Request $req): void
+    {
+        Response::ok(PeriodService::list($this->companyId()));
+    }
+
+    public function closePeriod(Request $req): void
+    {
+        $d = $this->validate($req, [
+            'period_start' => 'required|date',
+            'period_end'   => 'required|date',
+        ]);
+        try {
+            $p = PeriodService::close(
+                $this->companyId(),
+                $d['period_start'],
+                $d['period_end'],
+                Auth::id(),
+                $req->input('note')
+            );
+        } catch (\RuntimeException $e) {
+            Response::fail($e->getMessage(), 422);
+        }
+        Audit::log('period_close', 'accounting_periods', (string) $p['id'], null, $d);
+        Response::ok($p, 'Period closed');
+    }
+
+    public function reopenPeriod(Request $req, array $p): void
+    {
+        try {
+            $row = PeriodService::reopen($this->companyId(), (int) $p['id'], Auth::id());
+        } catch (\RuntimeException $e) {
+            Response::fail($e->getMessage(), 422);
+        }
+        Audit::log('period_reopen', 'accounting_periods', $p['id']);
+        Response::ok($row, 'Period reopened');
     }
 
     // ---- Accounts Payable --------------------------------------------------

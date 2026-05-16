@@ -33,6 +33,13 @@ final class SalesService
             }
         }
 
+        // Reject sales backdated into a closed accounting period.
+        PeriodService::assertOpen(
+            (int) $p['company_id'],
+            $p['sold_at'] ?? now(),
+            'Cannot record sale'
+        );
+
         try {
             return self::insertSale($p);
         } catch (\PDOException $e) {
@@ -274,6 +281,7 @@ final class SalesService
         if ($txn['status'] !== 'completed') {
             throw new \RuntimeException('Only a completed sale can be voided (status: ' . $txn['status'] . ')');
         }
+        PeriodService::assertOpen((int) $company, (string) $txn['sold_at'], 'Cannot void');
 
         return Database::transaction(function () use ($txn, $txnId, $company, $userId, $reason) {
             $moves = Database::all(
@@ -335,6 +343,7 @@ final class SalesService
         if (!in_array($txn['status'], ['completed', 'partially_refunded'], true)) {
             throw new \RuntimeException('Cannot refund a ' . $txn['status'] . ' sale');
         }
+        PeriodService::assertOpen((int) $company, (string) $txn['sold_at'], 'Cannot refund');
         if (!$items) {
             throw new \RuntimeException('Nothing to refund');
         }
