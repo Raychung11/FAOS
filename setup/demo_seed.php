@@ -115,6 +115,17 @@ try {
          VALUES (?,?,?,?,?,?,?,?,?,?,?,CURDATE(),?)'
     )->execute([$tenantId,$clientId,...array_values($fin),$score,$creator]);
 
+    // --- Borrowing capability inputs (settings k/v) --------------
+    $pdo->prepare(
+        'INSERT INTO settings (tenant_id,setting_key,setting_value)
+         VALUES (?,?,?)
+         ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)'
+    )->execute([$tenantId,'cap:' . $clientId, json_encode([
+        'monthly_debt'=>2500.0,'avg_rate'=>4.2,'remaining_years'=>22.0,
+        'dsr_cap'=>60.0,'new_rate'=>4.5,'new_years'=>10.0,
+        'refi_rate'=>3.4,'lump_sum'=>20000.0,
+    ])]);
+
     // --- Risk profile --------------------------------------------
     $pdo->prepare(
         'INSERT INTO risk_profiles
