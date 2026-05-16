@@ -126,6 +126,17 @@ try {
         'refi_rate'=>3.4,'lump_sum'=>20000.0,
     ])]);
 
+    // --- Tax planning inputs (settings k/v) ----------------------
+    $pdo->prepare(
+        'INSERT INTO settings (tenant_id,setting_key,setting_value)
+         VALUES (?,?,?)
+         ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)'
+    )->execute([$tenantId,'tax:' . $clientId, json_encode([
+        'annual_income'=>168000.0,'other_income'=>0.0,'children_u18'=>2,
+        'r_epf'=>4000.0,'r_life'=>1500.0,'r_prs'=>0.0,'r_lifestyle'=>2500.0,
+        'r_medins'=>0.0,'r_sspn'=>0.0,'r_medical'=>0.0,'r_spouse'=>0.0,
+    ])]);
+
     // --- Risk profile --------------------------------------------
     $pdo->prepare(
         'INSERT INTO risk_profiles

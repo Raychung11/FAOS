@@ -90,6 +90,7 @@ require __DIR__ . '/../includes/header.php';
     <?php endif; ?>
     <?php if (can('financial.manage')): ?>
       <a class="btn-os ghost sm" href="<?= e(url('advisor/capability.php?client_id='.$id)) ?>">Borrowing capability</a>
+      <a class="btn-os ghost sm" href="<?= e(url('advisor/tax.php?client_id='.$id)) ?>">Tax planning</a>
     <?php endif; ?>
   </div>
 </div>
