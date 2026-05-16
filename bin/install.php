@@ -1,9 +1,12 @@
 <?php
 /**
- * FAOS installer (CLI).
- *   php bin/install.php            -> create DB, schema, seed
- *   php bin/install.php --fresh    -> DROP and recreate the database
- *   php bin/install.php --no-seed  -> schema only
+ * FAOS installer.
+ *   php bin/install.php            apply migrations (baseline + pending) + seed
+ *   php bin/install.php --fresh    DROP and recreate the database (dev only!)
+ *   php bin/install.php --no-seed  schema/migrations only, no demo data
+ *
+ * This is a thin wrapper: the real work (idempotent, no-data-loss) is done by
+ * bin/migrate.php. Use migrate.php directly in production.
  */
 declare(strict_types=1);
 
@@ -17,15 +20,13 @@ $noSeed = in_array('--no-seed', $argv, true);
 $host = Config::get('DB_HOST');
 $port = Config::get('DB_PORT');
 $name = Config::get('DB_NAME');
-$user = Config::get('DB_USER');
-$pass = Config::get('DB_PASS');
 $char = Config::get('DB_CHARSET', 'utf8mb4');
 
 echo "FAOS Installer\n==============\n";
-echo "Target: {$user}@{$host}:{$port}  DB={$name}\n\n";
+echo 'Target: ' . Config::get('DB_USER') . "@{$host}:{$port}  DB={$name}\n\n";
 
 try {
-    $pdo = new PDO("mysql:host={$host};port={$port}", $user, $pass, [
+    $pdo = new PDO("mysql:host={$host};port={$port}", Config::get('DB_USER'), Config::get('DB_PASS'), [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
     ]);
 } catch (PDOException $e) {
@@ -38,67 +39,25 @@ if ($fresh) {
     echo "Dropping database {$name} (--fresh)…\n";
     $pdo->exec("DROP DATABASE IF EXISTS `{$name}`");
 }
-
 $pdo->exec("CREATE DATABASE IF NOT EXISTS `{$name}` CHARACTER SET {$char} COLLATE {$char}_unicode_ci");
-$pdo->exec("USE `{$name}`");
-echo "Database ready.\n";
+echo "Database ready. Running migrations…\n\n";
 
-function runSqlFile(PDO $pdo, string $file): void
-{
-    $raw = file_get_contents($file);
-    if ($raw === false) {
-        throw new RuntimeException("Cannot read {$file}");
-    }
-    // Strip full-line "--" comments and blank lines, then split on ";" that
-    // ends a line. Our schema/seed use no stored routines, so this is safe.
-    $clean = [];
-    foreach (preg_split('/\R/', $raw) as $line) {
-        $t = trim($line);
-        if ($t === '' || str_starts_with($t, '--')) {
-            continue;
-        }
-        $clean[] = $line;
-    }
-    $sql = implode("\n", $clean);
-
-    $buffer = '';
-    foreach (explode("\n", $sql) as $line) {
-        $buffer .= $line . "\n";
-        if (preg_match('/;\s*$/', $line)) {
-            $stmt = trim($buffer);
-            if ($stmt !== '') {
-                $pdo->exec($stmt);
-            }
-            $buffer = '';
-        }
-    }
-    if (trim($buffer) !== '') {
-        $pdo->exec(trim($buffer));
-    }
-}
-
-echo "Applying schema…\n";
-runSqlFile($pdo, __DIR__ . '/../database/schema.sql');
-echo "Schema applied.\n";
-
+// Single source of truth: delegate to the migration runner.
+$cmd = escapeshellarg(PHP_BINARY) . ' ' . escapeshellarg(__DIR__ . '/migrate.php');
 if (!$noSeed) {
-    $hasData = (int) $pdo->query('SELECT COUNT(*) FROM companies')->fetchColumn();
-    if ($hasData > 0 && !$fresh) {
-        echo "Seed skipped (data already present). Use --fresh to reset.\n";
-    } else {
-        echo "Seeding demo data…\n";
-        runSqlFile($pdo, __DIR__ . '/../database/seed.sql');
-        echo "Seed complete.\n";
-    }
+    $cmd .= ' --seed';
+}
+passthru($cmd, $code);
+if ($code !== 0) {
+    exit($code);
 }
 
 // Ensure an APP_KEY exists in .env.
-$envPath = __DIR__ . '/../.env';
+$envPath = BASE_PATH . '/.env';
 if (is_file($envPath)) {
     $env = file_get_contents($envPath);
     if (preg_match('/^APP_KEY=\s*$/m', $env)) {
-        $key = bin2hex(random_bytes(24));
-        $env = preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . $key, $env);
+        $env = preg_replace('/^APP_KEY=.*$/m', 'APP_KEY=' . bin2hex(random_bytes(24)), $env);
         file_put_contents($envPath, $env);
         echo "Generated APP_KEY.\n";
     }

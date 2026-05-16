@@ -44,11 +44,27 @@ The company does **not** own the hypermarket POS. So FAOS:
 
 ```bash
 cp .env.example .env          # set DB_* credentials
-php bin/install.php           # creates DB, schema, demo seed (use --fresh to reset)
+php bin/install.php           # create DB + run migrations + demo seed
 php -S 0.0.0.0:8080 server.php
 ```
 
 Open `http://localhost:8080`.
+
+### Database migrations (no data loss)
+
+The schema evolves through **forward-only, applied-once** migrations — never a
+destructive rebuild on a live system.
+
+```bash
+php bin/migrate.php           # apply baseline (if fresh) + pending migrations
+php bin/migrate.php --seed    # also load demo data if the DB is empty
+php bin/migrate.php --status  # show applied / pending, change nothing
+php bin/install.php --fresh   # DEV ONLY: drop + recreate, then migrate + seed
+```
+
+Baseline = `database/schema.sql` (recorded as `00000000000000_baseline`);
+incremental deltas live in `database/migrations/` and are tracked in the
+`schema_migrations` table, so re-running is a safe no-op.
 
 | User | Login | Role |
 |------|-------|------|
@@ -64,7 +80,18 @@ on delayed 3rd-party POS reports (reconciled later); restaurants own their till
 so their QR sales are real-time with no reconciliation. Both use the same QR
 sales/stock screens.
 
-Run the QR encoder conformance test: `php tests/qr_test.php`.
+### Tests & CI
+
+```bash
+php tests/qr_test.php          # QR encoder conformance (ISO/IEC 18004)
+bash tests/e2e/run_all.sh      # full e2e regression (needs server + DB up)
+```
+
+`tests/e2e/` holds the suites (base, finance, bankrecon, supply); `run_all.sh`
+resets the DB between isolation groups for determinism. **GitHub Actions**
+(`.github/workflows/ci.yml`) runs `php -l`, migrations + idempotency check, the
+QR test, and the full e2e regression against a MySQL 8 service on every push
+and PR.
 
 ---
 
