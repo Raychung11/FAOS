@@ -18,6 +18,7 @@ use App\Controllers\Api\ProductionController;
 use App\Controllers\Api\ReplenishmentController;
 use App\Controllers\Api\EInvoiceController;
 use App\Controllers\Api\AdminUserController;
+use App\Controllers\Api\ImportController;
 
 /** @var Router $r */
 $r = new Router();
@@ -36,6 +37,7 @@ $r->get('/ai',        [PageController::class, 'aiDashboard']);
 $r->get('/sales',     [PageController::class, 'salesScan']);
 $r->get('/sales-manage', [PageController::class, 'salesManage']);
 $r->get('/admin/users',  [PageController::class, 'adminUsers']);
+$r->get('/import',       [PageController::class, 'importPage']);
 $r->get('/stock',     [PageController::class, 'stockScan']);
 $r->get('/qr-labels', [PageController::class, 'qrLabels']);
 $r->get('/master/{resource}', [PageController::class, 'masterData']);
@@ -60,6 +62,12 @@ $r->put('/api/admin/users/{id}',         [AdminUserController::class, 'update'],
 $r->post('/api/admin/users/{id}/password',[AdminUserController::class, 'resetPassword'],'admin.users');
 $r->post('/api/admin/users/{id}/pin',    [AdminUserController::class, 'setPin'],        'admin.users');
 $r->post('/api/admin/users/{id}/unlock', [AdminUserController::class, 'unlock'],        'admin.users');
+
+// ---- API: bulk import ------------------------------------------------------
+$r->get('/api/import/products/template', [ImportController::class, 'productTemplate'], 'masterdata.manage');
+$r->post('/api/import/products',         [ImportController::class, 'products'],        'masterdata.manage');
+$r->get('/api/import/stock/template',    [ImportController::class, 'stockTemplate'],   'stock.manage');
+$r->post('/api/import/stock',            [ImportController::class, 'stock'],           'stock.manage');
 
 // ---- API: master data ------------------------------------------------------
 $r->get('/api/md/{resource}',        [MasterDataController::class, 'index'],  'masterdata.manage');

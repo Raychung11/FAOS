@@ -55,6 +55,9 @@ $nav = fn (string $href, string $label) =>
         <?= $nav('/master/tax_codes', '🧮 Tax Codes') ?>
         <?= $nav('/master/recipes', '📋 Recipes') ?>
       <?php endif; ?>
+      <?php if ($can('masterdata.manage') || $can('stock.manage')): ?>
+        <?= $nav('/import', '⬆️ Bulk Import') ?>
+      <?php endif; ?>
       <?php if ($can('admin.users')): ?>
         <div class="grp">Administration</div>
         <?= $nav('/admin/users', '👥 Users &amp; Roles') ?>

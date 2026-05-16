@@ -36,6 +36,7 @@ reset_db; run einvoice.sh
 reset_db; run inventory.sh
 reset_db; run corrections.sh
 reset_db; run admin.sh
+reset_db; run import.sh
 
 echo ""; echo ">>> qr_test.php"
 php "$ROOT/tests/qr_test.php" || fails=$((fails+1))

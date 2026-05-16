@@ -77,6 +77,19 @@ final class PageController extends Controller
         $this->view('sales.manage', ['title' => 'Sales Corrections']);
     }
 
+    public function importPage(Request $req): void
+    {
+        Auth::requireLogin($req);
+        if (!Auth::can('masterdata.manage') && !Auth::can('stock.manage')) {
+            Auth::requirePermission($req, 'masterdata.manage');
+        }
+        $this->view('admin.import', [
+            'title'       => 'Bulk Import',
+            'canProducts' => Auth::can('masterdata.manage'),
+            'canStock'    => Auth::can('stock.manage'),
+        ]);
+    }
+
     public function adminUsers(Request $req): void
     {
         Auth::requirePermission($req, 'admin.users');
