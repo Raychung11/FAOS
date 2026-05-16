@@ -127,6 +127,9 @@ INSERT INTO workers (id, user_id, outlet_id, kiosk_id, staff_no, hired_at) VALUE
 INSERT INTO settings (company_id, skey, svalue) VALUES
  (1,'low_stock_threshold_pct','20'),
  (1,'expiry_alert_days','3'),
- (1,'forecast_window_days','14');
+ (1,'forecast_window_days','14'),
+ (1,'recon_fee_pct','3.0'),            -- max acceptable MDR/fee band (% of gross)
+ (1,'recon_date_window_days','3'),     -- bank settles 0-3 days after terminal batch
+ (1,'recon_epsilon','0.50');           -- rounding tolerance (currency)
 
 SET FOREIGN_KEY_CHECKS = 1;

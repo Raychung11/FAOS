@@ -36,6 +36,29 @@
   FAOS.put = (u, b) => FAOS.api('PUT', u, b || {});
   FAOS.del = (u) => FAOS.api('DELETE', u, {});
 
+  // Multipart upload (CSV import). `fields` are appended to FormData.
+  FAOS.upload = async function (url, file, fields) {
+    const fd = new FormData();
+    if (file) fd.append('file', file);
+    fd.append('_csrf', CSRF);
+    Object.entries(fields || {}).forEach(([k, v]) =>
+      fd.append(k, typeof v === 'object' ? JSON.stringify(v) : v));
+    const res = await fetch(url, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: { 'Accept': 'application/json', 'X-CSRF-Token': CSRF, 'X-Device-Id': FAOS.deviceId() },
+      body: fd,
+    });
+    let json = null;
+    try { json = await res.json(); } catch (e) { /* ignore */ }
+    if (!res.ok) {
+      const err = new Error((json && json.message) || ('HTTP ' + res.status));
+      err.payload = json;
+      throw err;
+    }
+    return json;
+  };
+
   // ---- Device id (persistent per browser) ----------------------------------
   FAOS.deviceId = function () {
     let id = localStorage.getItem('faos_device');

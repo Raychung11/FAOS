@@ -805,4 +805,121 @@ CREATE TABLE ar_receipts (
   CONSTRAINT fk_arr_user    FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+-- ----------------------------------------------------------------------------
+-- 10. PAYMENT / BANK RECONCILIATION
+-- Card-terminal settlement (Z-reading) vs bank statement. Flexible CSV import
+-- with saved column mappings; batch-level (card/QR) + line-level (transfer)
+-- matching with MDR/fee tolerance.
+-- ----------------------------------------------------------------------------
+
+-- Reusable column mappings so any terminal / bank CSV layout can be ingested.
+CREATE TABLE recon_column_mappings (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  source_type     ENUM('terminal','bank') NOT NULL,
+  name            VARCHAR(96)  NOT NULL,
+  delimiter       VARCHAR(4)   NOT NULL DEFAULT ',',
+  has_header      TINYINT(1)   NOT NULL DEFAULT 1,
+  date_format     VARCHAR(32)  NOT NULL DEFAULT 'Y-m-d',
+  columns_json    JSON         NOT NULL,        -- {field: headerNameOrIndex}
+  created_by      BIGINT UNSIGNED NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_rcm (company_id, source_type, name),
+  CONSTRAINT fk_rcm_company FOREIGN KEY (company_id) REFERENCES companies(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE recon_imports (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  source_type     ENUM('terminal','bank') NOT NULL,
+  original_name   VARCHAR(255) NOT NULL,
+  stored_path     VARCHAR(255) NULL,
+  bank_label      VARCHAR(120) NULL,            -- bank/account label (bank imports)
+  mapping_id      BIGINT UNSIGNED NULL,
+  row_count       INT          NOT NULL DEFAULT 0,
+  total_amount    DECIMAL(14,2) NOT NULL DEFAULT 0,
+  period_start    DATE         NULL,
+  period_end      DATE         NULL,
+  note            VARCHAR(255) NULL,
+  imported_by     BIGINT UNSIGNED NULL,
+  imported_at     DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_ri_company (company_id, source_type),
+  CONSTRAINT fk_ri_company FOREIGN KEY (company_id) REFERENCES companies(id),
+  CONSTRAINT fk_ri_mapping FOREIGN KEY (mapping_id) REFERENCES recon_column_mappings(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE settlement_batches (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  terminal_import_id BIGINT UNSIGNED NOT NULL,
+  batch_date      DATE         NOT NULL,
+  channel         ENUM('cash','atm_debit','bank_transfer','duitnow_qr',
+                        'card_visa','card_master','card_amex','deposit','other') NOT NULL,
+  txn_count       INT          NOT NULL DEFAULT 0,
+  gross_total     DECIMAL(14,2) NOT NULL DEFAULT 0,
+  fee_total       DECIMAL(14,2) NOT NULL DEFAULT 0,
+  expected_net    DECIMAL(14,2) NOT NULL DEFAULT 0,
+  bank_transaction_id BIGINT UNSIGNED NULL,
+  bank_credit     DECIMAL(14,2) NOT NULL DEFAULT 0,
+  implied_fee     DECIMAL(14,2) NOT NULL DEFAULT 0,
+  variance        DECIMAL(14,2) NOT NULL DEFAULT 0,
+  status          ENUM('pending','matched','fee_variance','short','over','unmatched','not_expected')
+                        NOT NULL DEFAULT 'pending',
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_sb_company (company_id, batch_date, channel),
+  CONSTRAINT fk_sb_company FOREIGN KEY (company_id) REFERENCES companies(id),
+  CONSTRAINT fk_sb_import  FOREIGN KEY (terminal_import_id) REFERENCES recon_imports(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE terminal_transactions (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  import_id       BIGINT UNSIGNED NOT NULL,
+  batch_id        BIGINT UNSIGNED NULL,
+  txn_date        DATE         NOT NULL,
+  txn_time        TIME         NULL,
+  txn_ref         VARCHAR(96)  NULL,
+  raw_type        VARCHAR(64)  NULL,
+  channel         ENUM('cash','atm_debit','bank_transfer','duitnow_qr',
+                        'card_visa','card_master','card_amex','deposit','other') NOT NULL,
+  card_last4      VARCHAR(8)   NULL,
+  payer           VARCHAR(120) NULL,
+  amount          DECIMAL(14,2) NOT NULL,
+  fee             DECIMAL(14,2) NOT NULL DEFAULT 0,
+  match_status    ENUM('unmatched','batched','matched','manual') NOT NULL DEFAULT 'unmatched',
+  bank_txn_id     BIGINT UNSIGNED NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_tt_match (company_id, txn_date, channel, match_status),
+  KEY idx_tt_amount (company_id, amount),
+  CONSTRAINT fk_tt_company FOREIGN KEY (company_id) REFERENCES companies(id),
+  CONSTRAINT fk_tt_import  FOREIGN KEY (import_id) REFERENCES recon_imports(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tt_batch   FOREIGN KEY (batch_id)  REFERENCES settlement_batches(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE bank_transactions (
+  id              BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  company_id      BIGINT UNSIGNED NOT NULL,
+  import_id       BIGINT UNSIGNED NOT NULL,
+  txn_date        DATE         NOT NULL,
+  description     VARCHAR(255) NULL,
+  reference       VARCHAR(96)  NULL,
+  debit           DECIMAL(14,2) NOT NULL DEFAULT 0,
+  credit          DECIMAL(14,2) NOT NULL DEFAULT 0,
+  balance         DECIMAL(16,2) NULL,
+  match_status    ENUM('unmatched','matched','manual','exception') NOT NULL DEFAULT 'unmatched',
+  matched_batch_id    BIGINT UNSIGNED NULL,
+  matched_terminal_id BIGINT UNSIGNED NULL,
+  created_at      DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY idx_bt_match (company_id, txn_date, match_status),
+  KEY idx_bt_credit (company_id, credit),
+  CONSTRAINT fk_bt_company FOREIGN KEY (company_id) REFERENCES companies(id),
+  CONSTRAINT fk_bt_import  FOREIGN KEY (import_id) REFERENCES recon_imports(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;

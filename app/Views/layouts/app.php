@@ -33,6 +33,7 @@ $nav = fn (string $href, string $label) =>
       <?php endif; ?>
       <?php if ($can('dashboard.hq')): ?><?= $nav('/hq', '📊 HQ Dashboard') ?><?php endif; ?>
       <?php if ($can('finance.view')): ?><?= $nav('/finance', '💰 Finance') ?><?php endif; ?>
+      <?php if ($can('finance.view')): ?><?= $nav('/bank-recon', '🏦 Bank Reconciliation') ?><?php endif; ?>
       <?php if ($can('ai.view')): ?><?= $nav('/ai', '🤖 AI Forecasting') ?><?php endif; ?>
       <?php if ($can('reports.view')): ?><?= $nav('/reports', '📈 Reports') ?><?php endif; ?>
       <?php if ($can('reconciliation.manage')): ?><?= $nav('/reconciliation', '🔁 Reconciliation') ?><?php endif; ?>

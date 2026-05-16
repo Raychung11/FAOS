@@ -137,6 +137,12 @@ final class PageController extends Controller
         ]);
     }
 
+    public function bankRecon(Request $req): void
+    {
+        Auth::requirePermission($req, 'finance.view');
+        $this->view('finance.bankrecon', ['title' => 'Bank Reconciliation']);
+    }
+
     private function outletList(bool $kioskHubOnly = false): array
     {
         $u = Auth::user();

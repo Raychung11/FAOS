@@ -12,6 +12,7 @@ use App\Controllers\Api\DashboardController;
 use App\Controllers\Api\ReportController;
 use App\Controllers\Api\ReconciliationController;
 use App\Controllers\Api\FinanceController;
+use App\Controllers\Api\BankReconController;
 
 /** @var Router $r */
 $r = new Router();
@@ -34,6 +35,7 @@ $r->get('/master/{resource}', [PageController::class, 'masterData']);
 $r->get('/reports',   [PageController::class, 'reports']);
 $r->get('/reconciliation', [PageController::class, 'reconciliation']);
 $r->get('/finance',   [PageController::class, 'finance']);
+$r->get('/bank-recon',[PageController::class, 'bankRecon']);
 
 // ---- API: session / identity ----------------------------------------------
 $r->get('/api/me', [MasterDataController::class, 'me']);
@@ -88,6 +90,18 @@ $r->post('/api/finance/payables',         [FinanceController::class, 'createInvo
 $r->post('/api/finance/payables/{id}/pay',[FinanceController::class, 'payInvoice'],         'finance.manage');
 $r->get('/api/finance/receivables',       [FinanceController::class, 'receivables'],        'finance.view');
 $r->post('/api/finance/receivables/{id}/receive', [FinanceController::class, 'receiveSettlement'], 'finance.manage');
+
+// ---- API: bank / payment reconciliation -----------------------------------
+$r->get('/api/recon/mappings',    [BankReconController::class, 'mappings'],   'finance.view');
+$r->post('/api/recon/mappings',   [BankReconController::class, 'saveMapping'],'finance.manage');
+$r->post('/api/recon/preview',    [BankReconController::class, 'preview'],    'finance.manage');
+$r->post('/api/recon/import',     [BankReconController::class, 'import'],     'finance.manage');
+$r->post('/api/recon/run',        [BankReconController::class, 'run'],        'finance.manage');
+$r->get('/api/recon/summary',     [BankReconController::class, 'summary'],    'finance.view');
+$r->get('/api/recon/batches',     [BankReconController::class, 'batches'],    'finance.view');
+$r->get('/api/recon/exceptions',  [BankReconController::class, 'exceptions'], 'finance.view');
+$r->get('/api/recon/imports',     [BankReconController::class, 'imports'],    'finance.view');
+$r->post('/api/recon/match',      [BankReconController::class, 'match'],      'finance.manage');
 
 // ---- API: reconciliation ---------------------------------------------------
 $r->post('/api/reconciliation/import',  [ReconciliationController::class, 'import'],   'reconciliation.manage');

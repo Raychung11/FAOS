@@ -117,6 +117,16 @@ when a delayed report is reconciled), and a P&L summary (revenue, COGS, wastage
 cost, gross profit/margin) by period and account group, with CSV + printable
 (browser→PDF) statement. No double-entry ledger by design.
 
+**Payment / Bank Reconciliation (Accountant)** — fixes the card-terminal vs
+bank-statement mismatch. Upload any terminal Z-reading CSV and any bank CSV;
+a column-mapping step (auto-guessed, savable) handles arbitrary layouts. The
+engine groups terminal txns into settlement batches per day per scheme and
+matches them to bank credits with an MDR/fee tolerance (**batch level** for
+card/DuitNow/ATM), while bank transfers & deposits match **line level** by
+amount/date. Each batch is classified `matched / fee_variance (implied MDR) /
+short / over / unmatched / not_expected`, with manual-match override and an
+exceptions worklist.
+
 ---
 
 ## Key business rules enforced
