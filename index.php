@@ -101,7 +101,7 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
        structured, compliant advisory operation — with AI-drafted proposals,
        borrowing-capacity and tax-planning insight built in.</p>
     <div class="lp-cta">
-      <a class="lp-btn primary" href="<?= e(url('login.php')) ?>">Get started</a>
+      <a class="lp-btn primary" href="<?= e(url('signup.php')) ?>">Get started</a>
       <a class="lp-btn ghost" href="#pricing">See pricing</a>
     </div>
   </header>
@@ -123,7 +123,7 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
     <p class="sub">Every plan includes a monthly report allowance; extra
       reports are billed only as you use them.</p>
     <?php if (!$plans): ?>
-      <p class="sub"><a class="lp-btn ghost" href="<?= e(url('login.php')) ?>">Contact us to get started</a></p>
+      <p class="sub"><a class="lp-btn ghost" href="<?= e(url('signup.php')) ?>">Contact us to get started</a></p>
     <?php else: ?>
     <div class="lp-price">
       <?php foreach ($plans as $p): ?>
@@ -147,7 +147,7 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
             <?php endforeach; ?>
           </ul>
           <a class="lp-btn <?= $pop ? 'primary' : 'ghost' ?>" style="display:block;text-align:center"
-             href="<?= e(url('login.php')) ?>">Get started</a>
+             href="<?= e(url('signup.php')) ?>">Get started</a>
         </div>
       <?php endforeach; ?>
     </div>
