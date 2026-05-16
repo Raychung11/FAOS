@@ -79,7 +79,9 @@ final class MasterDataController extends Controller
         $resource = $p['resource'];
         $m = $this->model($resource);
         $data = $req->all();
-        if (in_array($resource, ['warehouses','outlets','suppliers','stock_groups','account_groups','product_categories','products'], true)) {
+        // Any company-scoped resource (per the MAP) gets company_id injected
+        // server-side — never trust a client-supplied tenant id.
+        if ((self::MAP[$resource][3] ?? false) === true) {
             $data['company_id'] = $this->companyId();
         }
         $id = $m->create($data);
@@ -95,8 +97,11 @@ final class MasterDataController extends Controller
         if (!$before) {
             Response::fail('Not found', 404);
         }
-        $m->update((int) $p['id'], $req->all());
-        Audit::log('update', $resource, $p['id'], $before, $req->all());
+        // Never let an update reassign the owning tenant.
+        $data = $req->all();
+        unset($data['company_id'], $data['id']);
+        $m->update((int) $p['id'], $data);
+        Audit::log('update', $resource, $p['id'], $before, $data);
         Response::ok(null, 'Updated');
     }
 

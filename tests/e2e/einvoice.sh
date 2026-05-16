@@ -37,7 +37,10 @@ ckc "$(curl -s -b /tmp/ei_a.txt $AH -X POST $B/api/einvoice/transaction/$TXN1 -d
 CON=$(curl -s -b /tmp/ei_a.txt $AH -X POST $B/api/einvoice/consolidated -d '{"outlet_id":1,"period_start":"2026-05-01","period_end":"2026-05-31"}')
 ckc "$CON" '"doc_type":"consolidated"' "consolidated e-invoice generated"
 ck "$(dbq "SELECT ROUND(total,2) FROM einvoices WHERE doc_type='consolidated'")" "9.90" "consolidated excludes already-invoiced sale (only S2 = 9.90)"
-ckc "$(curl -s -b /tmp/ei_a.txt $AH -X POST $B/api/einvoice/consolidated -d '{"outlet_id":1,"period_start":"2026-05-01","period_end":"2026-05-31"}')" 'already exists' "duplicate consolidated blocked"
+ckc "$(curl -s -b /tmp/ei_a.txt $AH -X POST $B/api/einvoice/consolidated -d '{"outlet_id":1,"period_start":"2026-05-01","period_end":"2026-05-31"}')" 'overlaps existing consolidated' "duplicate consolidated blocked"
+# Bug fix regression: a DIFFERENT but overlapping period must also be blocked
+# (consolidated invoices don't tag receipts -> would double-count to LHDN).
+ckc "$(curl -s -b /tmp/ei_a.txt $AH -X POST $B/api/einvoice/consolidated -d '{"outlet_id":1,"period_start":"2026-05-20","period_end":"2026-06-20"}')" 'overlaps existing consolidated' "overlapping-period consolidated blocked (no double-count)"
 
 # Printable tax invoice + validation QR.
 ckc "$(curl -s -b /tmp/ei_a.txt "$B/api/einvoice/$EID/print")" 'C12345678901' "printable tax invoice shows TIN"

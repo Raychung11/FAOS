@@ -454,12 +454,25 @@ final class BankReconService
                 throw new \RuntimeException('Batch not found');
             }
             $cr = (float) $bank['credit'];
-            $variance = round($cr - (float) $b['expected_net'], 2);
-            Database::transaction(function () use ($b, $bank, $cr, $variance) {
+            $expected = (float) $b['expected_net'];
+            $gross = (float) $b['gross_total'];
+            $variance = round($cr - $expected, 2);
+            $impliedFee = round(max(0, $gross - $cr), 2);
+            // Classify like the auto path so a manual link still surfaces
+            // fee/short/over discrepancies instead of hiding them.
+            $feePct = self::setting($company, 'recon_fee_pct', 3.0);
+            $eps    = self::setting($company, 'recon_epsilon', 0.50);
+            $status = match (true) {
+                abs($cr - $expected) <= $eps                                  => 'matched',
+                $cr < $expected && ($gross - $cr) <= $gross * $feePct / 100 + $eps => 'fee_variance',
+                $cr > $gross + $eps                                           => 'over',
+                default                                                       => 'short',
+            };
+            Database::transaction(function () use ($b, $bank, $cr, $variance, $impliedFee, $status) {
                 Database::run(
                     "UPDATE settlement_batches SET bank_transaction_id=?, bank_credit=?, variance=?,
-                            implied_fee=?, status='matched' WHERE id=?",
-                    [$bank['id'], $cr, $variance, round(max(0, (float) $b['gross_total'] - $cr), 2), $b['id']]
+                            implied_fee=?, status=? WHERE id=?",
+                    [$bank['id'], $cr, $variance, $impliedFee, $status, $b['id']]
                 );
                 Database::run(
                     "UPDATE bank_transactions SET match_status='manual', matched_batch_id=? WHERE id=?",

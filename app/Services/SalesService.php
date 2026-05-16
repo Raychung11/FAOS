@@ -33,6 +33,26 @@ final class SalesService
             }
         }
 
+        try {
+            return self::insertSale($p);
+        } catch (\PDOException $e) {
+            // Concurrent retry with the same client_uuid raced past the check
+            // above and hit uq_client_uuid -> treat as the idempotent dup.
+            if ($e->getCode() === '23000' && !empty($p['client_uuid'])) {
+                $existing = Database::first(
+                    'SELECT * FROM sales_transactions WHERE client_uuid = ? LIMIT 1',
+                    [$p['client_uuid']]
+                );
+                if ($existing) {
+                    return ['duplicate' => true, 'transaction' => $existing];
+                }
+            }
+            throw $e;
+        }
+    }
+
+    private static function insertSale(array $p): array
+    {
         return Database::transaction(function () use ($p) {
             $shiftId = self::activeShiftId((int) $p['user_id']);
             $txnRef = next_ref('SAL', 'sales_transactions', 'txn_ref');

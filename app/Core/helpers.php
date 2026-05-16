@@ -30,19 +30,23 @@ function qty(float|int|string $n): string
     return rtrim(rtrim(number_format((float) $n, 3, '.', ''), '0'), '.');
 }
 
-/** Generate a sequential reference like STK-20260516-000001. */
-function next_ref(string $prefix, string $table, string $column): string
+/**
+ * Generate a sequential reference like STK-20260516-000001.
+ *
+ * Atomic per (prefix + date): the INSERT ... ON DUPLICATE KEY UPDATE takes a
+ * row lock so concurrent callers can never mint the same ref. ($table/$column
+ * are kept for call-site readability but no longer used.)
+ */
+function next_ref(string $prefix, ?string $table = null, ?string $column = null): string
 {
-    $date = date('Ymd');
-    $like = "{$prefix}-{$date}-%";
-    $max = App\Core\Database::scalar(
-        "SELECT MAX($column) FROM $table WHERE $column LIKE ?",
-        [$like]
+    $date  = date('Ymd');
+    $scope = "{$prefix}-{$date}";
+    App\Core\Database::run(
+        'INSERT INTO ref_counters (scope, seq) VALUES (?, LAST_INSERT_ID(1))
+         ON DUPLICATE KEY UPDATE seq = LAST_INSERT_ID(seq + 1)',
+        [$scope]
     );
-    $seq = 1;
-    if ($max && preg_match('/-(\d+)$/', (string) $max, $m)) {
-        $seq = (int) $m[1] + 1;
-    }
+    $seq = (int) App\Core\Database::scalar('SELECT LAST_INSERT_ID()');
     return sprintf('%s-%s-%06d', $prefix, $date, $seq);
 }
 

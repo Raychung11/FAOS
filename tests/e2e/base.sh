@@ -21,6 +21,9 @@ H="-H Content-Type:application/json -H X-CSRF-Token:$CSRF -H Accept:application/
 
 ckc "$(curl -s -b $J $B/api/md/products)" '"sku":"CF-LATTE"' "list products"
 ckc "$(curl -s -b $J $H -X POST $B/api/md/products -d '{"sku":"CF-MOCHA","name":"Mocha 350ml","uom":"unit","type":"finished","cost_price":3.5,"sell_price":10.9,"is_sellable":1,"is_active":1}')" '"message":"Created"' "create product"
+# Bug fix regression: company-scoped resource create must inject company_id
+# server-side (UI sends no company_id). Previously tax_codes 500'd.
+ckc "$(curl -s -b $J $H -X POST $B/api/md/tax_codes -d '{"code":"SR8","name":"Service Tax 8%","tax_type":"service","rate":8,"is_active":1}')" '"message":"Created"' "create tax_code (company_id injected)"
 
 QL=$(curl -s -b $J $H -X POST $B/api/qr/labels -d '{"product_id":1,"count":3,"label_type":"carton","init_qty":24}')
 ckc "$QL" '"qr_ref":"STK-' "generate QR labels"

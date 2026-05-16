@@ -85,6 +85,14 @@ final class SalesController extends Controller
                 );
                 $results[] = ['client_uuid' => $sale['client_uuid'] ?? null, 'ok' => true, 'duplicate' => $r['duplicate']];
             } catch (\Throwable $e) {
+                // Mark the queue row failed so it isn't left misleadingly
+                // "pending"; the client keeps it and retries.
+                if (!empty($sale['client_uuid'])) {
+                    Database::run(
+                        "UPDATE offline_sync_queue SET status='failed', error_msg=? WHERE client_uuid=?",
+                        [substr($e->getMessage(), 0, 255), $sale['client_uuid']]
+                    );
+                }
                 $results[] = ['client_uuid' => $sale['client_uuid'] ?? null, 'ok' => false, 'error' => $e->getMessage()];
             }
         }

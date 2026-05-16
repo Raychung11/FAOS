@@ -200,12 +200,21 @@ final class EInvoiceService
         string $periodEnd,
         ?int $userId = null
     ): array {
-        if (Database::scalar(
-            "SELECT id FROM einvoices WHERE doc_type='consolidated' AND outlet_id=?
-              AND period_start=? AND period_end=? AND status<>'cancelled'",
-            [$outletId, $periodStart, $periodEnd]
-        )) {
-            throw new \RuntimeException('A consolidated e-invoice already exists for this outlet/period');
+        // Block ANY overlapping consolidated period for this outlet, otherwise
+        // the same receipts get reported to LHDN twice (consolidated invoices
+        // don't tag the receipts they cover).
+        $overlap = Database::first(
+            "SELECT einvoice_no, period_start, period_end FROM einvoices
+             WHERE doc_type='consolidated' AND outlet_id=? AND status<>'cancelled'
+               AND period_start <= ? AND period_end >= ?
+             LIMIT 1",
+            [$outletId, $periodEnd, $periodStart]
+        );
+        if ($overlap) {
+            throw new \RuntimeException(sprintf(
+                'Period overlaps existing consolidated %s (%s to %s)',
+                $overlap['einvoice_no'], $overlap['period_start'], $overlap['period_end']
+            ));
         }
         // Receipts not individually e-invoiced (B2C consolidation).
         $rows = Database::all(
