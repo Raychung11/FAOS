@@ -85,6 +85,9 @@ require __DIR__ . '/../includes/header.php';
     <?php if (can('proposals.manage')): ?>
       <a class="btn-os sm" href="<?= e(url('advisor/proposal-edit.php?client_id='.$id)) ?>">Generate proposal</a>
     <?php endif; ?>
+    <?php if (can('risk.manage')): ?>
+      <a class="btn-os ghost sm" href="<?= e(url('advisor/risk-edit.php?client_id='.$id)) ?>">Assess risk profile</a>
+    <?php endif; ?>
   </div>
 </div>
 

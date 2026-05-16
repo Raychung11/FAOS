@@ -122,9 +122,11 @@ try {
            assessed_on,created_by)
          VALUES (?,?,?,?,?,?,?,?)'
     )->execute([$tenantId,$clientId,
-        json_encode(['experience'=>'moderate','horizon'=>'10y','tolerance'=>'medium',
-                     'liquidity'=>'low','income_stability'=>'high','objective'=>'growth']),
-        62,'balanced','Comfortable with moderate volatility for long-term growth.',
+        // Option indexes matching the risk questionnaire (all "moderate"
+        // -> balanced, score 50). Keeps the pre-fill + bands consistent.
+        json_encode(['experience'=>2,'horizon'=>2,'tolerance'=>2,'liquidity'=>2,
+                     'income'=>2,'objective'=>2,'knowledge'=>2,'volatility'=>2]),
+        50,'balanced','Comfortable with moderate volatility for long-term growth.',
         date('Y-m-d', strtotime('-1 month')),$creator]);
 
     // --- Products + policies -------------------------------------
@@ -271,7 +273,7 @@ try {
                 'employer'=>'TechWorks Sdn Bhd','marital_status'=>'married',
                 'dependents'=>2],
             'financial' => $fin + ['health_score'=>$score],
-            'risk' => ['classification'=>'balanced','score'=>62,
+            'risk' => ['classification'=>'balanced','score'=>50,
                 'assessed_on'=>date('Y-m-d', strtotime('-1 month'))],
             'goals' => "Retire by 60; fund children's education.",
         ],
