@@ -129,6 +129,10 @@ final class ProcurementService
                      VALUES (?,?,?,?,?)',
                     [$grnId, $it['product_id'], $batchId, $it['qty'], $it['unit_cost']]
                 );
+                // AVCO must be recomputed BEFORE the receipt hits the balance.
+                StockService::recomputeAvgCost(
+                    (int) $it['product_id'], (float) $it['qty'], (float) $it['unit_cost']
+                );
                 StockService::recordMovement([
                     'company_id'    => $p['company_id'],
                     'product_id'    => (int) $it['product_id'],

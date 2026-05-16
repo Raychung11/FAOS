@@ -122,7 +122,7 @@ final class SalesService
                     'to_type'     => 'customer',
                     'ref_table'   => 'sales_transactions',
                     'ref_id'      => $txnId,
-                    'unit_cost'   => $product['cost_price'],
+                    'unit_cost'   => StockService::effectiveCost($product),
                     'user_id'     => $p['user_id'],
                     'device_id'   => $p['device_id'] ?? null,
                 ]);
@@ -162,15 +162,25 @@ final class SalesService
         $items = Database::all('SELECT * FROM recipe_items WHERE recipe_id = ?', [$recipe['id']]);
         $factor = $multiplier / max(0.0001, (float) $recipe['yield_qty']);
         foreach ($items as $ri) {
+            $need = (float) $ri['qty'] * $factor;
+            // Made-to-order ON SITE only: consume an ingredient when the
+            // selling location actually stocks it. If it doesn't, the item is
+            // a pre-made finished good produced upstream (central kitchen) —
+            // its ingredients were already consumed during production, so we
+            // must not double count or drive the kiosk negative.
+            if (StockService::balance((int) $ri['ingredient_id'], $locType, $locId) + 1e-6 < $need) {
+                continue;
+            }
             StockService::recordMovement([
                 'company_id'    => $company,
                 'product_id'    => (int) $ri['ingredient_id'],
                 'movement_type' => 'consume',
-                'qty'           => (float) $ri['qty'] * $factor,
+                'qty'           => $need,
                 'uom'           => $ri['uom'],
                 'from_type'     => $locType,
                 'from_id'       => $locId,
                 'to_type'       => 'none',
+                'unit_cost'     => StockService::effectiveCostById((int) $ri['ingredient_id']),
                 'ref_table'     => 'sales_transactions',
                 'ref_id'        => $txnId,
                 'user_id'       => $userId,

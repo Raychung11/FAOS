@@ -10,6 +10,7 @@
     <button class="btn ghost tab" data-tab="pnl">P&amp;L</button>
     <button class="btn ghost tab" data-tab="ap">Payables</button>
     <button class="btn ghost tab" data-tab="ar">Receivables</button>
+    <button class="btn ghost tab" data-tab="stock">Stock Value</button>
   </div>
 </div></div>
 
@@ -54,6 +55,15 @@
   <p class="muted mt" style="font-size:13px">Receivables are created automatically when an official hypermarket report is imported in <a href="<?= base_url('/reconciliation') ?>">Reconciliation</a>.</p>
 </section>
 
+<section id="stock" class="hidden">
+  <div class="card"><div class="hd"><span>Inventory Valuation (moving-average cost)</span><span class="badge b-info" id="iv-tot"></span></div>
+    <div class="bd" style="overflow:auto;max-height:520px"><table>
+      <thead><tr><th>SKU</th><th>Product</th><th>Location</th><th class="right">Qty</th><th class="right">Unit cost</th><th class="right">Value</th></tr></thead>
+      <tbody id="iv-body"><tr><td class="muted">Loading…</td></tr></tbody></table></div>
+  </div>
+  <p class="muted mt" style="font-size:13px">Negative rows indicate stock issued without recorded receipts (QR sales without stock-in) — investigate or stock-take.</p>
+</section>
+
 <script>
 const CANW = <?= json_encode(\App\Core\Auth::can('finance.manage')) ?>;
 function qs() {
@@ -63,8 +73,23 @@ function qs() {
   return p;
 }
 function tab(name) {
-  ['pnl','ap','ar'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== name));
-  if (name === 'ap') loadAP(); if (name === 'ar') loadAR(); if (name === 'pnl') loadPnl();
+  ['pnl','ap','ar','stock'].forEach(s => document.getElementById(s).classList.toggle('hidden', s !== name));
+  if (name === 'ap') loadAP(); if (name === 'ar') loadAR();
+  if (name === 'pnl') loadPnl(); if (name === 'stock') loadStock();
+}
+async function loadStock() {
+  try {
+    const { data } = await FAOS.get('/api/finance/inventory-valuation');
+    document.getElementById('iv-tot').textContent = 'Total ' + FAOS.money(data.total_value);
+    document.getElementById('iv-body').innerHTML = data.rows.length
+      ? data.rows.map(r => `<tr${Number(r.qty)<0?' style="color:var(--danger)"':''}>
+          <td>${FAOS.esc(r.sku)}</td><td>${FAOS.esc(r.name)}</td>
+          <td>${FAOS.esc(r.loc_type)} #${r.loc_id}</td>
+          <td class="right">${Number(r.qty)} ${FAOS.esc(r.uom)}</td>
+          <td class="right">${FAOS.money(r.unit_cost)}</td>
+          <td class="right">${FAOS.money(r.value)}</td></tr>`).join('')
+      : '<tr><td class="muted">No stock on hand</td></tr>';
+  } catch (e) { FAOS.toast(e.message, 'err'); }
 }
 document.querySelectorAll('.tab').forEach(b => b.addEventListener('click', () => tab(b.dataset.tab)));
 

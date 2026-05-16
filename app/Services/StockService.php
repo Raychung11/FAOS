@@ -23,6 +23,23 @@ final class StockService
     {
         return Database::transaction(function () use ($p) {
             $qty = (float) $p['qty'];
+            $fromType = $p['from_type'] ?? 'none';
+            $type = $p['movement_type'];
+
+            // Negative-stock guard for controlled internal movements only.
+            // Sales/consume are intentionally exempt (QR sales must work even
+            // without complete stock).
+            if ($fromType !== 'none' && $fromType !== 'supplier'
+                && self::isBlockedNegative((int) $p['company_id'], $type)) {
+                $onHand = self::balance((int) $p['product_id'], $fromType, (int) $p['from_id']);
+                if ($onHand + 1e-6 < $qty) {
+                    throw new \RuntimeException(sprintf(
+                        'Movement "%s" would make %s #%d negative for product #%d (on hand %s, needed %s)',
+                        $type, $fromType, (int) $p['from_id'], (int) $p['product_id'],
+                        qty($onHand), qty($qty)
+                    ));
+                }
+            }
 
             $id = Database::insert(
                 'INSERT INTO stock_movements
@@ -77,6 +94,60 @@ final class StockService
             'SELECT qty FROM stock_balances WHERE product_id=? AND loc_type=? AND loc_id=?',
             [$product, $locType, $locId]
         );
+    }
+
+    private static function setting(int $company, string $key, string $default): string
+    {
+        $v = Database::scalar(
+            'SELECT svalue FROM settings WHERE skey=? AND (company_id=? OR company_id IS NULL)
+             ORDER BY company_id IS NULL LIMIT 1',
+            [$key, $company]
+        );
+        return $v !== false && $v !== null ? (string) $v : $default;
+    }
+
+    private static function isBlockedNegative(int $company, string $movementType): bool
+    {
+        $list = self::setting($company, 'block_negative_movements', 'transfer_out,production_out');
+        $set = array_filter(array_map('trim', explode(',', $list)));
+        return in_array($movementType, $set, true);
+    }
+
+    /** Costing basis: maintained moving-average, falling back to standard cost. */
+    public static function effectiveCost(array $product): float
+    {
+        $avg = (float) ($product['avg_cost'] ?? 0);
+        return $avg > 0 ? $avg : (float) ($product['cost_price'] ?? 0);
+    }
+
+    public static function effectiveCostById(int $productId): float
+    {
+        $p = Database::first('SELECT avg_cost, cost_price FROM products WHERE id=?', [$productId]);
+        return $p ? self::effectiveCost($p) : 0.0;
+    }
+
+    /**
+     * Moving-average (AVCO) recompute on goods inwards:
+     *   newAvg = (onHandQty * oldAvg + inQty * inUnitCost) / (onHandQty + inQty)
+     * On-hand is the company-wide quantity across all locations.
+     */
+    public static function recomputeAvgCost(int $productId, float $inQty, float $inUnitCost): float
+    {
+        $p = Database::first('SELECT avg_cost, cost_price FROM products WHERE id=?', [$productId]);
+        if (!$p || $inQty <= 0) {
+            return self::effectiveCost($p ?? []);
+        }
+        $onHand = (float) Database::scalar(
+            'SELECT COALESCE(SUM(qty),0) FROM stock_balances WHERE product_id=?',
+            [$productId]
+        );
+        $oldAvg = self::effectiveCost($p);
+        $denom = $onHand + $inQty;
+        $newAvg = $denom > 0
+            ? round(($onHand * $oldAvg + $inQty * $inUnitCost) / $denom, 4)
+            : round($inUnitCost, 4);
+        Database::run('UPDATE products SET avg_cost=? WHERE id=?', [$newAvg, $productId]);
+        return $newAvg;
     }
 
     /** FEFO-ordered open batches for a product (FIFO fallback on null expiry). */

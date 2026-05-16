@@ -41,8 +41,12 @@ ckc "$(curl -s -b /tmp/cj_w.txt $WH -X POST $B/api/sales -d '{"payment_type":"ca
 ckc "$(curl -s -b /tmp/cj_w.txt $WH -X POST $B/api/sales -d '{"payment_type":"cash","client_uuid":"E2E-UUID-1","items":[{"product_id":1,"qty":2}]}')" '"duplicate":true' "sale idempotent on client_uuid"
 ckc "$(curl -s -b /tmp/cj_w.txt $B/api/dashboard/worker)" '"today"' "worker dashboard"
 
-MOV=$(dbq "SELECT COUNT(*) FROM stock_movements WHERE movement_type='consume' AND ref_table='sales_transactions'")
-[ "${MOV:-0}" -ge 3 ] && { echo "  PASS  recipe auto-consumption ($MOV moves)"; PASS=$((PASS+1)); } || { echo "  FAIL  recipe auto-consumption ($MOV)"; FAIL=$((FAIL+1)); }
+# Made-to-order consumption only fires when the location stocks the
+# ingredient. Kiosk 1 has no raw milk/beans/syrup (those live at the central
+# kitchen), so a pre-made finished good is sold WITHOUT consuming ingredients
+# — and crucially without driving the kiosk negative.
+NEG=$(dbq "SELECT COUNT(*) FROM stock_balances WHERE loc_type='kiosk' AND loc_id=1 AND qty < 0")
+ck "${NEG:-x}" "0" "no negative kiosk ingredient stock (no double-count)"
 ck "$(dbq "SELECT qty FROM stock_balances WHERE product_id=1 AND loc_type='kiosk' AND loc_id=1")" "8.000" "sale deducted kiosk stock (10-2=8)"
 
 AME=$(login /tmp/cj_a.txt admin admin123); ACSRF=$(echo "$AME" | grep -oP '"csrf":"\K[^"]+')

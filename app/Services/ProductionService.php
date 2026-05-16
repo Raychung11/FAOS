@@ -76,8 +76,8 @@ final class ProductionService
                 // FEFO: tag the earliest-expiring batch for traceability.
                 $batches = StockService::fefoBatches((int) $ri['ingredient_id']);
                 $batchId = $batches[0]['id'] ?? null;
-                $unitCost = (float) ($batches[0]['unit_cost']
-                    ?? Database::scalar('SELECT cost_price FROM products WHERE id=?', [$ri['ingredient_id']]));
+                // Cost issues at the maintained moving-average (AVCO).
+                $unitCost = StockService::effectiveCostById((int) $ri['ingredient_id']);
                 $lineCost = $need * $unitCost;
                 $totalCost += $lineCost;
 
@@ -123,6 +123,9 @@ final class ProductionService
                     $producedQty, $unitCostOut,
                 ]
             );
+            // Roll the output product's moving-average with this run's cost
+            // (before the produced qty hits the balance).
+            StockService::recomputeAvgCost((int) $po['product_id'], $producedQty, $unitCostOut);
             StockService::recordMovement([
                 'company_id'    => $po['company_id'],
                 'product_id'    => (int) $po['product_id'],

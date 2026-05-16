@@ -119,9 +119,10 @@ final class StockController extends Controller
             'movement_type' => $type,
             'qty'         => (float) $d['qty'],
             'uom'         => $label['product_uom'],
-            // Wastage carries cost (feeds P&L wastage); recipe "consume" does
-            // not, so finished-good COGS is never double counted.
-            'unit_cost'   => $type === 'wastage' ? (float) ($label['product_cost'] ?? 0) : 0,
+            // Wastage carries moving-average cost (feeds P&L wastage); recipe
+            // "consume" does not, so finished-good COGS is never double counted.
+            'unit_cost'   => $type === 'wastage'
+                ? StockService::effectiveCostById((int) $label['product_id']) : 0,
             'from_type'   => $d['from_type'],
             'from_id'     => (int) $d['from_id'],
             'to_type'     => 'none',

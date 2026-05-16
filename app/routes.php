@@ -94,6 +94,7 @@ $r->get('/api/reports/worker-performance', [ReportController::class, 'workerPerf
 $r->get('/api/finance/summary',           [FinanceController::class, 'summary'],            'finance.view');
 $r->get('/api/finance/statement',         [FinanceController::class, 'statement'],          'finance.view');
 $r->get('/api/finance/sst-summary',       [FinanceController::class, 'sstSummary'],         'finance.view');
+$r->get('/api/finance/inventory-valuation', [FinanceController::class, 'inventoryValuation'], 'finance.view');
 $r->get('/api/finance/payables',          [FinanceController::class, 'payables'],           'finance.view');
 $r->post('/api/finance/payables',         [FinanceController::class, 'createInvoice'],      'finance.manage');
 $r->post('/api/finance/payables/{id}/pay',[FinanceController::class, 'payInvoice'],         'finance.manage');

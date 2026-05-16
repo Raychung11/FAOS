@@ -52,6 +52,11 @@ final class FinanceController extends Controller
         ]);
     }
 
+    public function inventoryValuation(Request $req): void
+    {
+        Response::ok(FinanceService::inventoryValuation($this->companyId()));
+    }
+
     // ---- Accounts Payable --------------------------------------------------
 
     public function payables(Request $req): void

@@ -33,6 +33,7 @@ reset_db; run base.sh;      run finance.sh
 reset_db; run bankrecon.sh
 reset_db; run supply.sh
 reset_db; run einvoice.sh
+reset_db; run inventory.sh
 
 echo ""; echo ">>> qr_test.php"
 php "$ROOT/tests/qr_test.php" || fails=$((fails+1))

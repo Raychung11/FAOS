@@ -178,4 +178,26 @@ final class FinanceService
             [$recv, $status, $settlementId]
         );
     }
+
+    /** On-hand stock valued at moving-average cost, by product + location. */
+    public static function inventoryValuation(int $company): array
+    {
+        $rows = Database::all(
+            "SELECT p.sku, p.name, p.uom,
+                    b.loc_type, b.loc_id,
+                    ROUND(b.qty,3) AS qty,
+                    ROUND(COALESCE(NULLIF(p.avg_cost,0), p.cost_price),4) AS unit_cost,
+                    ROUND(b.qty * COALESCE(NULLIF(p.avg_cost,0), p.cost_price),2) AS value
+             FROM stock_balances b
+             JOIN products p ON p.id = b.product_id
+             WHERE b.company_id = ? AND b.qty <> 0
+             ORDER BY value DESC",
+            [$company]
+        );
+        return [
+            'rows'        => $rows,
+            'total_value' => round(array_sum(array_column($rows, 'value')), 2),
+            'negative'    => array_values(array_filter($rows, static fn ($r) => (float) $r['qty'] < 0)),
+        ];
+    }
 }
