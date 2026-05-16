@@ -26,8 +26,9 @@ final class ReconciliationService
              FROM sales_transactions st
              JOIN sales_items si ON si.transaction_id = st.id
              WHERE st.outlet_id = ? AND DATE(st.sold_at) BETWEEN ? AND ?
+               AND st.status <> ?
              GROUP BY si.product_id',
-            [$report['outlet_id'], $report['period_start'], $report['period_end']]
+            [$report['outlet_id'], $report['period_start'], $report['period_end'], 'voided']
         );
         $qrMap = [];
         foreach ($qr as $r) {

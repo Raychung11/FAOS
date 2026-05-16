@@ -33,6 +33,7 @@ $r->get('/outlet',    [PageController::class, 'outletDashboard']);
 $r->get('/hq',        [PageController::class, 'hqDashboard']);
 $r->get('/ai',        [PageController::class, 'aiDashboard']);
 $r->get('/sales',     [PageController::class, 'salesScan']);
+$r->get('/sales-manage', [PageController::class, 'salesManage']);
 $r->get('/stock',     [PageController::class, 'stockScan']);
 $r->get('/qr-labels', [PageController::class, 'qrLabels']);
 $r->get('/master/{resource}', [PageController::class, 'masterData']);
@@ -77,6 +78,9 @@ $r->get('/api/sales',              [SalesController::class, 'list'],         'sa
 $r->post('/api/sales/shift/open',  [SalesController::class, 'openShift'],    'sales.scan');
 $r->post('/api/sales/shift/close', [SalesController::class, 'closeShift'],   'sales.scan');
 $r->get('/api/sales/shift',        [SalesController::class, 'shiftSummary'], 'sales.scan');
+$r->get('/api/sales/{id}',         [SalesController::class, 'show'],         'sales.view');
+$r->post('/api/sales/{id}/void',   [SalesController::class, 'void'],         'sales.void_refund');
+$r->post('/api/sales/{id}/refund', [SalesController::class, 'refund'],       'sales.void_refund');
 
 // ---- API: dashboards -------------------------------------------------------
 $r->get('/api/dashboard/worker', [DashboardController::class, 'worker'], 'dashboard.worker');

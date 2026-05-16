@@ -39,23 +39,24 @@ INSERT INTO permissions (id, code, name, module) VALUES
  (14,'admin.users','Manage users/roles','admin'),
  (15,'qr.print','Generate / print QR labels','qr'),
  (16,'finance.view','View finance (AP/AR/P&L)','finance'),
- (17,'finance.manage','Manage invoices / payments / receipts','finance');
+ (17,'finance.manage','Manage invoices / payments / receipts','finance'),
+ (18,'sales.void_refund','Void / refund sales','sales');
 
 -- super_admin: everything
 INSERT INTO role_permissions (role_id, permission_id)
   SELECT 1, id FROM permissions;
 -- hq_manager (+ finance read)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
- (2,1),(2,3),(2,5),(2,6),(2,7),(2,8),(2,9),(2,10),(2,11),(2,13),(2,15),(2,16);
+ (2,1),(2,3),(2,5),(2,6),(2,7),(2,8),(2,9),(2,10),(2,11),(2,13),(2,15),(2,16),(2,18);
 -- outlet_manager (hypermarket kiosk hub)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
- (3,2),(3,3),(3,4),(3,5),(3,8),(3,11),(3,12),(3,15);
--- worker
+ (3,2),(3,3),(3,4),(3,5),(3,8),(3,11),(3,12),(3,15),(3,18);
+-- worker (no void/refund: fraud prevention)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
  (4,2),(4,4),(4,12);
 -- restaurant_manager (same operational scope, restaurant outlet)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
- (5,2),(5,3),(5,4),(5,5),(5,8),(5,11),(5,12),(5,15);
+ (5,2),(5,3),(5,4),(5,5),(5,8),(5,11),(5,12),(5,15),(5,18);
 -- accountant (company finance + reports + reconciliation/AR)
 INSERT INTO role_permissions (role_id, permission_id) VALUES
  (6,8),(6,9),(6,16),(6,17);

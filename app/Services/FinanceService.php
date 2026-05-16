@@ -19,18 +19,30 @@ final class FinanceService
         $f = $from . ' 00:00:00';
         $t = $to . ' 23:59:59';
 
-        $revenue = (float) Database::scalar(
-            'SELECT COALESCE(SUM(si.line_amount),0)
+        $grossSales = (float) Database::scalar(
+            "SELECT COALESCE(SUM(si.line_amount),0)
              FROM sales_items si JOIN sales_transactions st ON st.id = si.transaction_id
-             WHERE st.company_id = ? AND st.sold_at BETWEEN ? AND ?',
+             WHERE st.company_id = ? AND st.sold_at BETWEEN ? AND ?
+               AND st.status <> 'voided'",
             [$company, $f, $t]
         );
+        // Refunds reduce recognised revenue.
+        $refunds = (float) Database::scalar(
+            'SELECT COALESCE(SUM(total_amount),0) FROM sales_refunds
+             WHERE company_id = ? AND created_at BETWEEN ? AND ?',
+            [$company, $f, $t]
+        );
+        $revenue = round($grossSales - $refunds, 2);
 
-        // COGS = finished-good sale movements (recipe "consume" moves carry no
-        // unit cost, so there is no double counting).
+        // COGS = finished-good "sale" movements net of "void"/"refund"
+        // reversals (recipe "consume" carries no unit cost -> no double count).
         $cogs = (float) Database::scalar(
-            "SELECT COALESCE(SUM(qty*unit_cost),0) FROM stock_movements
-             WHERE company_id = ? AND movement_type = 'sale'
+            "SELECT COALESCE(SUM(
+                       CASE WHEN movement_type='sale' THEN qty*unit_cost
+                            WHEN movement_type IN ('void','refund') THEN -qty*unit_cost
+                            ELSE 0 END),0)
+             FROM stock_movements
+             WHERE company_id = ? AND movement_type IN ('sale','void','refund')
                AND created_at BETWEEN ? AND ?",
             [$company, $f, $t]
         );
@@ -51,6 +63,7 @@ final class FinanceService
              JOIN products p ON p.id = si.product_id
              LEFT JOIN account_groups ag ON ag.id = p.account_group_id
              WHERE st.company_id = ? AND st.sold_at BETWEEN ? AND ?
+               AND st.status <> 'voided'
              GROUP BY ag.id, ag.name
              ORDER BY revenue DESC",
             [$company, $f, $t]
@@ -64,6 +77,7 @@ final class FinanceService
             "SELECT DATE(st.sold_at) d, SUM(si.line_amount) revenue
              FROM sales_items si JOIN sales_transactions st ON st.id = si.transaction_id
              WHERE st.company_id = ? AND st.sold_at BETWEEN ? AND ?
+               AND st.status <> 'voided'
              GROUP BY d ORDER BY d",
             [$company, $f, $t]
         );
@@ -71,7 +85,9 @@ final class FinanceService
         $gross = round($revenue - $cogs, 2);
         return [
             'period'        => ['from' => $from, 'to' => $to],
-            'revenue'       => round($revenue, 2),
+            'gross_sales'   => round($grossSales, 2),
+            'refunds'       => round($refunds, 2),
+            'revenue'       => $revenue,
             'cogs'          => round($cogs, 2),
             'gross_profit'  => $gross,
             'wastage_cost'  => round($wastage, 2),

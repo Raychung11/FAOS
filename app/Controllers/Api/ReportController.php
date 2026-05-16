@@ -30,7 +30,7 @@ final class ReportController extends Controller
         }
         [$label, $join] = self::DIMENSIONS[$dim];
 
-        $where = 'st.company_id = ?';
+        $where = "st.company_id = ? AND st.status <> 'voided'";
         $args = [$this->companyId()];
         $u = Auth::user();
         if ($u['outlet_id']) {
@@ -126,6 +126,7 @@ final class ReportController extends Controller
              JOIN outlets o ON o.id = st.outlet_id
              WHERE us.company_id = ?
                AND st.sold_at >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+               AND st.status <> 'voided'
              GROUP BY us.id ORDER BY amount DESC",
             [$this->companyId()]
         );

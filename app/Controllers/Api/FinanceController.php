@@ -40,15 +40,25 @@ final class FinanceController extends Controller
              JOIN sales_transactions st ON st.id = si.transaction_id
              LEFT JOIN tax_codes tc ON tc.id = si.tax_code_id
              WHERE st.company_id=? AND st.sold_at BETWEEN ? AND ?
+               AND st.status <> 'voided'
              GROUP BY tc.id, tc.code, tc.name, tc.rate
              ORDER BY output_tax DESC",
             [$this->companyId(), $from . ' 00:00:00', $to . ' 23:59:59']
         );
+        // Refunds reduce output tax payable.
+        $refundTax = (float) Database::scalar(
+            'SELECT COALESCE(SUM(tax_amount),0) FROM sales_refunds
+             WHERE company_id=? AND created_at BETWEEN ? AND ?',
+            [$this->companyId(), $from . ' 00:00:00', $to . ' 23:59:59']
+        );
+        $grossTax = round(array_sum(array_column($rows, 'output_tax')), 2);
         Response::ok([
             'period'          => ['from' => $from, 'to' => $to],
             'rows'            => $rows,
             'total_taxable'   => round(array_sum(array_column($rows, 'taxable_sales')), 2),
-            'total_output_tax' => round(array_sum(array_column($rows, 'output_tax')), 2),
+            'gross_output_tax' => $grossTax,
+            'refund_tax'      => round($refundTax, 2),
+            'total_output_tax' => round($grossTax - $refundTax, 2),
         ]);
     }
 

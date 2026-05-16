@@ -71,6 +71,12 @@ final class PageController extends Controller
         ]);
     }
 
+    public function salesManage(Request $req): void
+    {
+        Auth::requirePermission($req, 'sales.void_refund');
+        $this->view('sales.manage', ['title' => 'Sales Corrections']);
+    }
+
     public function stockScan(Request $req): void
     {
         Auth::requirePermission($req, 'stock.scan');

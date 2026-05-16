@@ -146,6 +146,9 @@ final class EInvoiceService
         if (!$txn) {
             throw new \RuntimeException('Sales transaction not found');
         }
+        if ($txn['status'] === 'voided') {
+            throw new \RuntimeException('Cannot e-invoice a voided sale');
+        }
         if (Database::scalar('SELECT id FROM einvoices WHERE transaction_id=?', [$txnId])) {
             throw new \RuntimeException('An e-invoice already exists for this sale');
         }
@@ -227,7 +230,7 @@ final class EInvoiceService
              LEFT JOIN einvoices e ON e.transaction_id = st.id
              WHERE st.company_id=? AND st.outlet_id=?
                AND DATE(st.sold_at) BETWEEN ? AND ?
-               AND e.id IS NULL
+               AND e.id IS NULL AND st.status <> 'voided'
              GROUP BY DATE(st.sold_at) ORDER BY d",
             [$company, $outletId, $periodStart, $periodEnd]
         );

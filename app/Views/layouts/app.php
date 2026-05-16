@@ -25,6 +25,7 @@ $nav = fn (string $href, string $label) =>
       <?php endif; ?>
       <?php if ($can('sales.scan')): ?><?= $nav('/sales', '📷 QR Sales') ?><?php endif; ?>
       <?php if ($can('stock.scan')): ?><?= $nav('/stock', '📦 QR Stock') ?><?php endif; ?>
+      <?php if ($can('sales.void_refund')): ?><?= $nav('/sales-manage', '↩️ Sales Corrections') ?><?php endif; ?>
       <?php if ($can('dashboard.outlet')): ?>
         <?= $nav('/outlet', $u['role_code'] === 'restaurant_manager' ? '🍽️ Restaurant Dashboard' : '🏪 Outlet Dashboard') ?>
       <?php endif; ?>

@@ -99,6 +99,75 @@ final class SalesController extends Controller
         Response::ok(['results' => $results]);
     }
 
+    public function void(Request $req, array $p): void
+    {
+        try {
+            $txn = SalesService::void(
+                $this->companyId(),
+                (int) $p['id'],
+                (int) Auth::id(),
+                $req->input('reason')
+            );
+        } catch (\RuntimeException $e) {
+            Response::fail($e->getMessage(), 422);
+        }
+        Audit::log('sale_void', 'sales_transactions', $p['id'], null, ['reason' => $req->input('reason')]);
+        Response::ok($txn, 'Sale voided; stock reversed');
+    }
+
+    public function refund(Request $req, array $p): void
+    {
+        $items = $req->input('items');
+        if (!is_array($items) || !$items) {
+            Response::fail('items[] required (sales_item_id + qty)', 422);
+        }
+        $method = $req->input('refund_method', 'cash');
+        if (!in_array($method, ['cash', 'card', 'ewallet', 'transfer'], true)) {
+            Response::fail('Invalid refund_method', 422);
+        }
+        try {
+            $res = SalesService::refund(
+                $this->companyId(),
+                (int) $p['id'],
+                $items,
+                $req->input('reason'),
+                $method,
+                (int) Auth::id()
+            );
+        } catch (\RuntimeException $e) {
+            Response::fail($e->getMessage(), 422);
+        }
+        Audit::log('sale_refund', 'sales_refunds', (string) $res['refund']['id'], null, $res);
+        Response::ok($res, 'Refund recorded; stock returned');
+    }
+
+    public function show(Request $req, array $p): void
+    {
+        $txn = Database::first(
+            'SELECT st.*, o.name AS outlet_name, us.full_name AS worker_name
+             FROM sales_transactions st
+             JOIN outlets o ON o.id = st.outlet_id
+             JOIN users us ON us.id = st.user_id
+             WHERE st.id=? AND st.company_id=?',
+            [$p['id'], $this->companyId()]
+        );
+        if (!$txn) {
+            Response::fail('Not found', 404);
+        }
+        $txn['items'] = Database::all(
+            'SELECT si.*, p.name AS product_name,
+                    COALESCE((SELECT SUM(qty) FROM sales_refund_items WHERE sales_item_id=si.id),0) AS refunded_qty
+             FROM sales_items si JOIN products p ON p.id=si.product_id
+             WHERE si.transaction_id=?',
+            [$p['id']]
+        );
+        $txn['refunds'] = Database::all(
+            'SELECT * FROM sales_refunds WHERE transaction_id=? ORDER BY id DESC',
+            [$p['id']]
+        );
+        Response::ok($txn);
+    }
+
     public function list(Request $req): void
     {
         $u = Auth::user();

@@ -15,7 +15,8 @@ final class ForecastService
     /** Forecast daily demand per product for an outlet over N days. */
     public static function forecast(int $company, ?int $outletId, int $horizonDays = 14, int $lookbackDays = 56): array
     {
-        $where = 'st.company_id = ? AND st.sold_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)';
+        $where = "st.company_id = ? AND st.status <> 'voided'
+                  AND st.sold_at >= DATE_SUB(CURDATE(), INTERVAL ? DAY)";
         $args = [$company, $lookbackDays];
         if ($outletId !== null) {
             $where .= ' AND st.outlet_id = ?';
@@ -127,7 +128,8 @@ final class ForecastService
     public static function anomalies(int $company, ?int $outletId = null, float $z = 2.5): array
     {
         $fc = self::forecast($company, $outletId, 1, 56);
-        $where = 'st.company_id = ? AND st.sold_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)';
+        $where = "st.company_id = ? AND st.status <> 'voided'
+                  AND st.sold_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)";
         $args = [$company];
         if ($outletId !== null) {
             $where .= ' AND st.outlet_id = ?';
