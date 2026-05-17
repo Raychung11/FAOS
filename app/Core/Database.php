@@ -34,8 +34,19 @@ final class Database
                 PDO::ATTR_STRINGIFY_FETCHES  => false,
             ]);
         } catch (PDOException $e) {
-            Logger::error('DB connection failed', ['msg' => $e->getMessage()]);
-            throw new \RuntimeException('Database connection failed', 0, $e);
+            Logger::error('DB connection failed', [
+                'msg'  => $e->getMessage(),
+                'host' => Config::get('DB_HOST'),
+                'db'   => Config::get('DB_NAME'),
+                'user' => Config::get('DB_USER'),
+            ]);
+            $detail = Config::bool('APP_DEBUG', false)
+                ? ' — ' . $e->getMessage()
+                  . ' (host=' . Config::get('DB_HOST')
+                  . ', db=' . Config::get('DB_NAME')
+                  . ', user=' . Config::get('DB_USER') . ')'
+                : '';
+            throw new \RuntimeException('Database connection failed' . $detail, 0, $e);
         }
 
         return self::$pdo;
