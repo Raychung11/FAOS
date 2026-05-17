@@ -1,0 +1,31 @@
+# FAOS root .htaccess — SAFETY NET for shared hosting (e.g. Hostinger) when the
+# document root is the PROJECT ROOT instead of the public/ folder.
+#
+# PREFERRED: point your domain's document root at the `public/` directory
+# (hPanel -> your website -> Advanced -> document root). Then this file is
+# unused and only public/ is ever web-reachable.
+#
+# If you cannot change the document root, this routes traffic into public/
+# and blocks the sensitive directories/files from the web.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Block secrets and non-web code if the repo root is exposed.
+    RewriteRule ^\.env(\.|$)                  - [F,L]
+    RewriteRule ^(app|bin|database|tests|storage|\.git)(/|$) - [F,L]
+
+    # Serve real static files that live under public/ (css, js, images).
+    RewriteCond %{DOCUMENT_ROOT}/public%{REQUEST_URI} -f
+    RewriteRule ^(.*)$ public/$1 [L]
+
+    # Everything else -> application front controller.
+    RewriteRule ^ public/index.php [L]
+</IfModule>
+
+# Defensive deny even if mod_rewrite is unavailable.
+<FilesMatch "(^\.env|\.sql|composer\.(json|lock))$">
+    Require all denied
+</FilesMatch>

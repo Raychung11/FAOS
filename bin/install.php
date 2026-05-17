@@ -10,6 +10,17 @@
  */
 declare(strict_types=1);
 
+// CLI only. Opening this in a browser on shared hosting fatals (passthru/exec
+// are usually disabled) and would expose the installer — refuse clearly.
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    header('Content-Type: text/plain');
+    exit("FAOS installer is a command-line tool and cannot be run from a browser.\n\n"
+        . "Set up the database instead by importing database/reset.sql in phpMyAdmin\n"
+        . "(or database/schema.sql then database/seed.sql), then configure .env.\n"
+        . "Point your domain's document root at the public/ folder.\n");
+}
+
 require __DIR__ . '/../app/Core/bootstrap.php';
 
 use App\Core\Config;

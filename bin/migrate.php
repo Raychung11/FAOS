@@ -16,6 +16,13 @@
  */
 declare(strict_types=1);
 
+if (PHP_SAPI !== 'cli') {
+    http_response_code(403);
+    header('Content-Type: text/plain');
+    exit("FAOS migrator is a command-line tool and cannot be run from a browser.\n"
+        . "Import database/reset.sql in phpMyAdmin instead, then configure .env.\n");
+}
+
 require __DIR__ . '/../app/Core/bootstrap.php';
 
 use App\Core\Config;

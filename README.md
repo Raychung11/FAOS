@@ -72,6 +72,29 @@ Or the two-file way (`database/schema.sql` is the **complete** schema):
 > fails with `#1061 Duplicate key` / `#1054 Unknown column`. Manual setup =
 > `reset.sql` **or** `schema.sql` + `seed.sql`, nothing else.
 
+### Deploy on Hostinger (shared hosting)
+
+1. **PHP 8.1+** — hPanel → *PHP Configuration* → select 8.1/8.2/8.3.
+2. **Upload** the project (Git deploy or File Manager) into your site folder.
+3. **Document root → `public/`** — hPanel → your website → *Advanced /
+   document root* → set it to `…/public`. (If you can't, the included root
+   `.htaccess` routes traffic into `public/` and blocks `app/ bin/ database/
+   .env` — but changing the doc root is preferred.)
+4. **Database** — create a MySQL DB + user in hPanel, open **phpMyAdmin**,
+   select the DB, **Import → `database/reset.sql`** (one file: drops + schema
+   + demo seed).
+5. **`.env`** — copy `.env.example` to `.env` (File Manager) and set
+   `DB_HOST` `DB_NAME` `DB_USER` `DB_PASS` (Hostinger DB host is usually
+   `localhost`), `APP_URL=https://yourdomain`, `APP_ENV=production`,
+   `APP_DEBUG=false`, a random 32+ char `APP_KEY`.
+6. Visit the site. Log in `admin / admin123` (change it immediately).
+
+> ❌ **Never open `/bin/install.php` or `/bin/migrate.php` in a browser.**
+> They are CLI tools (and shared hosting disables `passthru`/`exec`, so they
+> 500). The database is set up by importing `reset.sql` in phpMyAdmin — no
+> installer URL is needed. If you have SSH/Terminal in hPanel you *may* run
+> `php bin/migrate.php --seed` from the project dir instead of importing.
+
 ### Database migrations (no data loss)
 
 The schema evolves through **forward-only, applied-once** migrations — never a
