@@ -1,14 +1,18 @@
 <?php
 /**
- * FAOS migration runner — applies pending migrations only (no data loss).
+ * FAOS migration runner.
  *
- *   php bin/migrate.php            apply baseline (if fresh) + pending migrations
+ *   php bin/migrate.php            baseline (if needed) + apply pending
  *   php bin/migrate.php --seed     also load demo seed if the DB is empty
- *   php bin/migrate.php --status   show applied / pending, make no changes
+ *   php bin/migrate.php --status   show applied / pending, change nothing
  *
- * Baseline = database/schema.sql (recorded as version "00000000000000_baseline").
- * Incremental changes live in database/migrations/<version>_<name>.sql and are
- * applied in filename order, each recorded in the schema_migrations table.
+ * database/schema.sql is the COMPLETE current schema (single source of truth
+ * for a fresh DB; importing it + seed.sql also works standalone). Every
+ * migration in database/migrations/ up to and including SCHEMA_BASELINE is
+ * already folded into schema.sql, so the runner records those as applied
+ * WITHOUT executing them (no duplicate-column/table errors on a fresh DB).
+ * Only migrations newer than SCHEMA_BASELINE are executed — that's how future
+ * incremental changes ship to existing deployments.
  */
 declare(strict_types=1);
 
@@ -16,6 +20,10 @@ require __DIR__ . '/../app/Core/bootstrap.php';
 
 use App\Core\Config;
 use App\Core\SqlRunner;
+
+// Highest migration version baked into schema.sql. Bump this whenever
+// schema.sql is regenerated to include newer migrations.
+const SCHEMA_BASELINE = '20260516170000_accounting_periods';
 
 $seed   = in_array('--seed', $argv, true);
 $status = in_array('--status', $argv, true);
@@ -47,8 +55,9 @@ $pdo->exec(
      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4'
 );
 
-$applied = $pdo->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN);
-$applied = array_flip($applied);
+$applied = array_flip(
+    $pdo->query('SELECT version FROM schema_migrations')->fetchAll(PDO::FETCH_COLUMN)
+);
 
 $tableExists = static function (PDO $p, string $t): bool {
     $s = $p->prepare(
@@ -60,26 +69,40 @@ $tableExists = static function (PDO $p, string $t): bool {
 };
 
 $baseVersion = '00000000000000_baseline';
-$migrationsDir = BASE_PATH . '/database/migrations';
-$pending = [];
-foreach (glob($migrationsDir . '/*.sql') ?: [] as $f) {
-    $v = basename($f, '.sql');
-    if (!isset($applied[$v])) {
+
+$files = [];
+foreach (glob(BASE_PATH . '/database/migrations/*.sql') ?: [] as $f) {
+    $files[basename($f, '.sql')] = $f;
+}
+ksort($files);
+
+$squashed = [];   // <= SCHEMA_BASELINE  -> recorded, never executed
+$pending  = [];   // >  SCHEMA_BASELINE  -> executed
+foreach ($files as $v => $f) {
+    if (isset($applied[$v])) {
+        continue;
+    }
+    if (strcmp($v, SCHEMA_BASELINE) <= 0) {
+        $squashed[$v] = $f;
+    } else {
         $pending[$v] = $f;
     }
 }
-ksort($pending);
 
 if ($status) {
-    echo "Applied migrations:\n";
+    echo "Applied:\n";
     foreach (array_keys($applied) as $v) {
         echo "  ✓ {$v}\n";
     }
     echo $applied ? '' : "  (none)\n";
-    echo "Pending migrations:\n";
-    if (!isset($applied[$baseVersion]) && !$tableExists($pdo, 'companies')) {
-        echo "  • {$baseVersion} (schema.sql)\n";
+    if (!isset($applied[$baseVersion])) {
+        echo "Baseline pending: schema.sql"
+            . ($tableExists($pdo, 'companies') ? " (adopt existing)\n" : " (fresh)\n");
     }
+    foreach (array_keys($squashed) as $v) {
+        echo "  ~ {$v} (folded into schema.sql)\n";
+    }
+    echo "Pending:\n";
     foreach (array_keys($pending) as $v) {
         echo "  • {$v}\n";
     }
@@ -88,28 +111,31 @@ if ($status) {
 }
 
 $record = static function (PDO $p, string $version, string $file, string $sql): void {
-    $stmt = $p->prepare(
-        'INSERT INTO schema_migrations (version, filename, checksum) VALUES (?,?,?)'
-    );
-    $stmt->execute([$version, basename($file), sha1($sql)]);
+    $p->prepare('INSERT INTO schema_migrations (version, filename, checksum) VALUES (?,?,?)')
+      ->execute([$version, basename($file), sha1($sql)]);
 };
 
 // --- Baseline -------------------------------------------------------------
 if (!isset($applied[$baseVersion])) {
     if ($tableExists($pdo, 'companies')) {
-        // Existing pre-migration install: adopt current schema as baseline.
         $record($pdo, $baseVersion, 'schema.sql', 'adopted');
         echo "Baseline adopted (existing schema, not re-run).\n";
     } else {
-        $schemaFile = BASE_PATH . '/database/schema.sql';
-        $sql = (string) file_get_contents($schemaFile);
+        $sql = (string) file_get_contents(BASE_PATH . '/database/schema.sql');
         $n = SqlRunner::runString($pdo, $sql);
         $record($pdo, $baseVersion, 'schema.sql', $sql);
         echo "Baseline applied: schema.sql ({$n} statements).\n";
     }
+    $applied[$baseVersion] = true;
 }
 
-// --- Pending incremental migrations --------------------------------------
+// --- Squash: migrations already inside schema.sql -> mark, never run -------
+foreach ($squashed as $v => $f) {
+    $record($pdo, $v, $f, 'squashed-into-baseline');
+    echo "Folded (already in schema.sql): {$v}\n";
+}
+
+// --- Pending incremental migrations (newer than the baked baseline) -------
 if (!$pending) {
     echo "No pending migrations.\n";
 } else {

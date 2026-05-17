@@ -50,21 +50,36 @@ php -S 0.0.0.0:8080 server.php
 
 Open `http://localhost:8080`.
 
+### Setup option B — manual SQL import (shared hosting / phpMyAdmin)
+
+No CLI? `database/schema.sql` is the **complete current schema**, so importing
+just these two files works standalone:
+
+```
+1. Create a utf8mb4 database, then import  database/schema.sql
+2. Import  database/seed.sql   (demo data + default logins)
+3. Point .env DB_* at it
+```
+
 ### Database migrations (no data loss)
 
 The schema evolves through **forward-only, applied-once** migrations — never a
 destructive rebuild on a live system.
 
 ```bash
-php bin/migrate.php           # apply baseline (if fresh) + pending migrations
+php bin/migrate.php           # baseline (if needed) + apply pending
 php bin/migrate.php --seed    # also load demo data if the DB is empty
 php bin/migrate.php --status  # show applied / pending, change nothing
 php bin/install.php --fresh   # DEV ONLY: drop + recreate, then migrate + seed
 ```
 
-Baseline = `database/schema.sql` (recorded as `00000000000000_baseline`);
-incremental deltas live in `database/migrations/` and are tracked in the
-`schema_migrations` table, so re-running is a safe no-op.
+`database/schema.sql` is the full schema and already contains every migration
+up to `SCHEMA_BASELINE`; the runner records those as applied **without
+re-executing** them (so a fresh DB never hits duplicate-column errors).
+`database/migrations/` holds only deltas newer than that baseline, tracked in
+`schema_migrations`, so re-running is a safe no-op. When `schema.sql` is
+regenerated to fold in newer migrations, bump `SCHEMA_BASELINE` in
+`bin/migrate.php`.
 
 | User | Login | Role |
 |------|-------|------|
