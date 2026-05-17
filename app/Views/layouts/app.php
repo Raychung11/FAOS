@@ -13,6 +13,10 @@ $nav = fn (string $href, string $label) =>
 <title><?= e($title ?? 'FAOS BOS') ?> · FAOS</title>
 <link rel="stylesheet" href="<?= base_url('/assets/css/app.css') ?>">
 <script>window.__CSRF__=<?= json_encode(App\Core\Csrf::token()) ?>;window.__CURRENCY__=<?= json_encode(App\Core\Config::get('CURRENCY_SYMBOL','RM')) ?>;</script>
+<!-- Loaded in <head> so FAOS / FAOSScanner are defined BEFORE any page's
+     inline content script runs (those execute during body parsing). -->
+<script src="<?= base_url('/assets/js/app.js') ?>"></script>
+<script src="<?= base_url('/assets/js/scanner.js') ?>"></script>
 </head>
 <body>
 <div class="app">
@@ -80,9 +84,6 @@ $nav = fn (string $href, string $label) =>
     </main>
   </div>
 </div>
-<script>window.__CSRF__=<?= json_encode(App\Core\Csrf::token()) ?>;</script>
-<script src="<?= base_url('/assets/js/app.js') ?>"></script>
-<script src="<?= base_url('/assets/js/scanner.js') ?>"></script>
 <?= $scripts ?? '' ?>
 </body>
 </html>
