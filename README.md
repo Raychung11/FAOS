@@ -52,14 +52,25 @@ Open `http://localhost:8080`.
 
 ### Setup option B — manual SQL import (shared hosting / phpMyAdmin)
 
-No CLI? `database/schema.sql` is the **complete current schema**, so importing
-just these two files works standalone:
+No CLI? Easiest is the single bundled file:
+
+```
+Import  database/reset.sql      (drops all tables + full schema + demo seed)
+```
+
+Or the two-file way (`database/schema.sql` is the **complete** schema):
 
 ```
 1. Create a utf8mb4 database, then import  database/schema.sql
 2. Import  database/seed.sql   (demo data + default logins)
 3. Point .env DB_* at it
 ```
+
+> ⚠️ **Do NOT import anything from `database/migrations/` by hand.** Those are
+> incremental deltas for the CLI migrator and are **already folded into
+> `schema.sql`**. Importing them in phpMyAdmin re-applies existing changes and
+> fails with `#1061 Duplicate key` / `#1054 Unknown column`. Manual setup =
+> `reset.sql` **or** `schema.sql` + `seed.sql`, nothing else.
 
 ### Database migrations (no data loss)
 
