@@ -68,6 +68,8 @@ $r->get('/api/import/products/template', [ImportController::class, 'productTempl
 $r->post('/api/import/products',         [ImportController::class, 'products'],        'masterdata.manage');
 $r->get('/api/import/stock/template',    [ImportController::class, 'stockTemplate'],   'stock.manage');
 $r->post('/api/import/stock',            [ImportController::class, 'stock'],           'stock.manage');
+$r->get('/api/import/po/template',       [ImportController::class, 'poTemplate'],      'procurement.manage');
+$r->post('/api/import/po',               [ImportController::class, 'purchaseOrder'],   'procurement.manage');
 
 // ---- API: master data ------------------------------------------------------
 $r->get('/api/md/{resource}',        [MasterDataController::class, 'index'],  'masterdata.manage');

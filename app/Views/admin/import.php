@@ -26,6 +26,33 @@
     </div>
   </div>
   <?php endif; ?>
+
+  <?php if (!empty($canPO)): ?>
+  <div class="card">
+    <div class="hd">Supplier Purchase Order</div>
+    <div class="bd">
+      <p class="muted" style="font-size:13px">Upload a supplier PO's lines → creates a <b>draft PO</b> (then approve → GRN → auto AP invoice). Matches product by SKU then barcode.</p>
+      <a class="btn ghost" href="/api/import/po/template">⬇ Download template</a>
+      <div class="row mt">
+        <div><label>Supplier</label><select id="poSup">
+          <?php foreach ($suppliers as $s): ?><option value="<?= (int)$s['id'] ?>"><?= e($s['code']) ?> · <?= e($s['name']) ?></option><?php endforeach; ?>
+        </select></div>
+        <div><label>Receiving warehouse</label><select id="poWh">
+          <option value="">— none —</option>
+          <?php foreach ($warehouses as $w): ?><option value="<?= (int)$w['id'] ?>"><?= e($w['name']) ?></option><?php endforeach; ?>
+        </select></div>
+        <div><label>Expected date</label><input id="poDate" type="date"></div>
+      </div>
+      <label style="display:flex;gap:8px;align-items:center;color:var(--ink);margin-top:10px">
+        <input type="checkbox" id="poCreate" checked style="width:auto"> Auto-create products that don't exist yet (initial onboarding)
+      </label>
+      <label class="mt">CSV file (barcode,sku,description,qty,uom,unit_cost)</label>
+      <input type="file" id="poFile" accept=".csv,.txt">
+      <button class="btn ok mt" id="poBtn">Create PO from CSV</button>
+      <div id="poOut" class="mt"></div>
+    </div>
+  </div>
+  <?php endif; ?>
 </div>
 
 <script>
@@ -62,4 +89,24 @@ function wire(fileId, btnId, outId, url) {
 }
 wire('pFile', 'pBtn', 'pOut', '/api/import/products');
 wire('sFile', 'sBtn', 'sOut', '/api/import/stock');
+
+const poBtn = document.getElementById('poBtn');
+if (poBtn) poBtn.addEventListener('click', async () => {
+  const f = document.getElementById('poFile').files[0];
+  if (!f) return FAOS.toast('Choose a CSV file', 'err');
+  poBtn.disabled = true;
+  try {
+    const r = await FAOS.upload('/api/import/po', f, {
+      supplier_id: document.getElementById('poSup').value,
+      warehouse_id: document.getElementById('poWh').value,
+      expected_date: document.getElementById('poDate').value,
+      create_missing: document.getElementById('poCreate').checked ? '1' : '0',
+    });
+    FAOS.toast(r.message, 'ok');
+    renderResult(document.getElementById('poOut'), r.data);
+  } catch (e) {
+    FAOS.toast(e.message, 'err');
+    if (e.payload && e.payload.errors) renderResult(document.getElementById('poOut'), { errors: e.payload.errors });
+  } finally { poBtn.disabled = false; }
+});
 </script>

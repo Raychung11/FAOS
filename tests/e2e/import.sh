@@ -56,10 +56,36 @@ S2=$(curl -s -b /tmp/im_a.txt $HC -F "file=@$TMP/s.csv" $B/api/import/stock)
 ck "$(echo "$S2" | grep -oP '"applied":\K[0-9]+')" "0" "opening stock re-run idempotent (0 applied)"
 ck "$(echo "$S2" | grep -oP '"unchanged":\K[0-9]+')" "2" "re-run reports 2 unchanged"
 
+# --- Purchase Order from CSV ---
+ck "$(curl -s -b /tmp/im_a.txt -o /dev/null -w '%{content_type}' $B/api/import/po/template | cut -d';' -f1)" "text/csv" "PO template downloads"
+cat > "$TMP/po.csv" <<'CSV'
+barcode,sku,description,qty,uom,unit_cost
+,CF-LATTE,Existing latte,5,unit,3.20
+RM710,,Prawn 2pcs for Salmon Fish Head,20,pkt,5.20
+,,No identifier row,1,unit,1.00
+CSV
+PO=$(curl -s -b /tmp/im_a.txt $HC -F "file=@$TMP/po.csv" -F "supplier_id=1" -F "warehouse_id=1" -F "create_missing=1" $B/api/import/po)
+ckc "$PO" '"po_ref":"PO-' "PO created from CSV"
+ck "$(echo "$PO" | grep -oP '"products_matched":\K[0-9]+')" "1" "matched existing product by SKU"
+ck "$(echo "$PO" | grep -oP '"products_created":\K[0-9]+')" "1" "auto-created missing product by barcode"
+ck "$(echo "$PO" | grep -oP '"total":\K[0-9.]+')" "120" "PO total = 5*3.20 + 20*5.20 = 120.00"
+ckc "$PO" 'barcode or sku is required' "row without identifier reported as error"
+ck "$(dbq "SELECT barcode FROM products WHERE company_id=1 AND sku='RM710'")" "RM710" "auto-created product carries barcode"
+POID=$(echo "$PO" | grep -oP '"po_id":\K[0-9]+')
+ck "$(dbq "SELECT status FROM purchase_orders WHERE id=$POID")" "draft" "imported PO is a draft (flows to approve->GRN)"
+ckc "$(curl -s -b /tmp/im_a.txt "$B/api/procurement/po")" "\"id\":$POID" "imported PO appears in Procurement list"
+# create_missing off + unknown identifier -> all rows fail -> 422
+cat > "$TMP/po2.csv" <<'CSV'
+barcode,sku,description,qty,uom,unit_cost
+ZZZNOPE,,Unknown thing,2,unit,1.00
+CSV
+ckc "$(curl -s -b /tmp/im_a.txt $HC -F "file=@$TMP/po2.csv" -F "supplier_id=1" -F "create_missing=0" $B/api/import/po)" 'No valid PO lines' "unknown product without create_missing rejected"
+
 # --- RBAC ---
 W=$(login /tmp/im_w.txt worker1 worker123); WC=$(echo "$W" | grep -oP '"csrf":"\K[^"]+')
 ck "$(curl -s -b /tmp/im_w.txt -o /dev/null -w '%{http_code}' -H "X-CSRF-Token:$WC" -H 'Accept:application/json' -F "file=@$TMP/p.csv" $B/api/import/products)" "403" "RBAC: worker blocked from product import"
 ck "$(curl -s -b /tmp/im_w.txt -o /dev/null -w '%{http_code}' -H "X-CSRF-Token:$WC" -H 'Accept:application/json' -F "file=@$TMP/s.csv" $B/api/import/stock)" "403" "RBAC: worker blocked from stock import"
+ck "$(curl -s -b /tmp/im_w.txt -o /dev/null -w '%{http_code}' -H "X-CSRF-Token:$WC" -H 'Accept:application/json' -F "file=@$TMP/po.csv" -F "supplier_id=1" $B/api/import/po)" "403" "RBAC: worker blocked from PO import"
 
 rm -rf "$TMP"
 finish "IMPORT"

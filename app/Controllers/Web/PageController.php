@@ -80,13 +80,23 @@ final class PageController extends Controller
     public function importPage(Request $req): void
     {
         Auth::requireLogin($req);
-        if (!Auth::can('masterdata.manage') && !Auth::can('stock.manage')) {
+        $canPO = Auth::can('procurement.manage');
+        if (!Auth::can('masterdata.manage') && !Auth::can('stock.manage') && !$canPO) {
             Auth::requirePermission($req, 'masterdata.manage');
         }
         $this->view('admin.import', [
             'title'       => 'Bulk Import',
             'canProducts' => Auth::can('masterdata.manage'),
             'canStock'    => Auth::can('stock.manage'),
+            'canPO'       => $canPO,
+            'suppliers'   => $canPO ? Database::all(
+                'SELECT id, code, name FROM suppliers WHERE company_id=? AND is_active=1 ORDER BY name',
+                [$this->companyId()]
+            ) : [],
+            'warehouses'  => $canPO ? Database::all(
+                'SELECT id, name FROM warehouses WHERE company_id=? AND is_active=1 ORDER BY name',
+                [$this->companyId()]
+            ) : [],
         ]);
     }
 

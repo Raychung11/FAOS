@@ -9,6 +9,7 @@ use App\Core\Controller;
 use App\Core\Database;
 use App\Core\Request;
 use App\Core\Response;
+use App\Services\ProcurementService;
 use App\Services\StockService;
 
 /**
@@ -27,6 +28,7 @@ final class ImportController extends Controller
         'is_sellable',
     ];
     private const STOCK_COLS = ['sku', 'loc_type', 'loc_code', 'qty', 'unit_cost'];
+    private const PO_COLS    = ['barcode', 'sku', 'description', 'qty', 'uom', 'unit_cost'];
 
     public function productTemplate(Request $req): never
     {
@@ -186,6 +188,136 @@ final class ImportController extends Controller
             ['applied' => $applied, 'skipped' => $skipped, 'errors' => count($errors)]);
         Response::ok(['applied' => $applied, 'unchanged' => $skipped, 'errors' => $errors],
             "Opening stock: $applied applied, $skipped unchanged");
+    }
+
+    public function poTemplate(Request $req): never
+    {
+        $this->csvTemplate('faos_purchase_order_template', self::PO_COLS, [
+            ['RM710', '', 'Prawn 2pcs for Salmon Fish Head', '20', 'pkt', '5.20'],
+            ['RM684', '', 'Butane Gas 230g', '4', 'tin', '4.95'],
+            ['INT744456', '', 'Roasted Chicken Wing', '5', 'pkt', '8.60'],
+        ]);
+    }
+
+    /**
+     * Create a draft supplier PO from CSV lines. Matches a product by SKU then
+     * barcode; can auto-create missing ones (handy for initial onboarding).
+     * The PO then flows through the normal approve -> GRN -> AP invoice path.
+     */
+    public function purchaseOrder(Request $req): void
+    {
+        $supplierId = (int) $req->input('supplier_id');
+        $supplier = Database::first(
+            'SELECT * FROM suppliers WHERE id = ? AND company_id = ?',
+            [$supplierId, $this->companyId()]
+        );
+        if (!$supplier) {
+            Response::fail('Valid supplier_id required', 422);
+        }
+        $warehouseId = $req->input('warehouse_id') ? (int) $req->input('warehouse_id') : null;
+        if ($warehouseId !== null && !Database::scalar(
+            'SELECT id FROM warehouses WHERE id = ? AND company_id = ?',
+            [$warehouseId, $this->companyId()]
+        )) {
+            Response::fail('Warehouse not in your company', 422);
+        }
+        $createMissing = filter_var($req->input('create_missing', false), FILTER_VALIDATE_BOOL);
+
+        $rows = $this->readCsv();
+        $items = [];
+        $created = 0;
+        $matched = 0;
+        $errors = [];
+
+        foreach ($rows as $n => $r) {
+            try {
+                $barcode = trim((string) ($r['barcode'] ?? ''));
+                $sku     = trim((string) ($r['sku'] ?? ''));
+                $desc    = trim((string) ($r['description'] ?? ''));
+                $qty     = (float) ($r['qty'] ?? 0);
+                $cost    = (float) ($r['unit_cost'] ?? 0);
+                $uom     = trim((string) ($r['uom'] ?? 'unit')) ?: 'unit';
+                if ($sku === '' && $barcode === '') {
+                    throw new \RuntimeException('barcode or sku is required');
+                }
+                if ($qty <= 0) {
+                    throw new \RuntimeException('qty must be > 0');
+                }
+
+                $p = null;
+                if ($sku !== '') {
+                    $p = Database::first(
+                        'SELECT id FROM products WHERE company_id = ? AND sku = ?',
+                        [$this->companyId(), $sku]
+                    );
+                }
+                if (!$p && $barcode !== '') {
+                    $p = Database::first(
+                        'SELECT id FROM products WHERE company_id = ? AND barcode = ?',
+                        [$this->companyId(), $barcode]
+                    );
+                }
+
+                if ($p) {
+                    $productId = (int) $p['id'];
+                    $matched++;
+                } elseif ($createMissing) {
+                    $newSku = $sku !== '' ? $sku : $barcode;
+                    if (Database::scalar(
+                        'SELECT id FROM products WHERE company_id = ? AND sku = ?',
+                        [$this->companyId(), $newSku]
+                    )) {
+                        throw new \RuntimeException("SKU '$newSku' exists but didn't match — fix the row");
+                    }
+                    $productId = Database::insert(
+                        'INSERT INTO products
+                          (company_id, sku, barcode, name, uom, type, cost_price,
+                           sell_price, is_sellable, is_active)
+                         VALUES (?,?,?,?,?,?,?,?,0,1)',
+                        [
+                            $this->companyId(), $newSku,
+                            $barcode !== '' ? $barcode : null,
+                            $desc !== '' ? $desc : $newSku,
+                            $uom, 'consumable', $cost, 0,
+                        ]
+                    );
+                    $created++;
+                } else {
+                    throw new \RuntimeException(
+                        "No product for " . ($sku ?: $barcode)
+                        . " (enable 'create missing' to add it)"
+                    );
+                }
+
+                $items[] = ['product_id' => $productId, 'qty' => $qty, 'unit_cost' => $cost];
+            } catch (\Throwable $e) {
+                $errors[] = ['row' => $n + 2, 'error' => $e->getMessage()];
+            }
+        }
+
+        if (!$items) {
+            Response::fail('No valid PO lines (see errors)', 422, $errors);
+        }
+
+        $po = ProcurementService::createPO([
+            'company_id'    => $this->companyId(),
+            'supplier_id'   => $supplierId,
+            'warehouse_id'  => $warehouseId,
+            'expected_date' => $req->input('expected_date') ?: null,
+            'items'         => $items,
+            'user_id'       => Auth::id(),
+        ]);
+        Audit::log('import_po', 'purchase_orders', (string) $po['id'], null,
+            ['lines' => count($items), 'created' => $created, 'matched' => $matched]);
+        Response::ok([
+            'po_id'              => $po['id'],
+            'po_ref'             => $po['po_ref'],
+            'total'              => $po['total'],
+            'lines'              => count($items),
+            'products_matched'   => $matched,
+            'products_created'   => $created,
+            'errors'             => $errors,
+        ], "Draft PO {$po['po_ref']} created ({$po['total']})");
     }
 
     // ---- helpers -----------------------------------------------------------
