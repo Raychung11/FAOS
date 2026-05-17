@@ -31,33 +31,55 @@ if (!$popPlan && $plans) { $popPlan = $plans[0]; }
     : [15.0, 20];
 
 $featureLabels = [
-    'leads' => 'Lead pipeline', 'clients' => 'Client 360 & reviews',
-    'reviews' => 'Annual review scheduler', 'proposals' => 'AI proposal generator',
+    'leads' => 'Track new prospects', 'clients' => 'All clients in one place',
+    'reviews' => 'Review reminders', 'proposals' => 'Proposals written for you',
     'commissions' => 'Commission tracking',
 ];
 
 $features = [
-    ['Client servicing OS', 'A structured client 360 — profiles, policies, documents and a never-miss annual review scheduler.'],
-    ['AI proposal generator', 'Draft full advisory proposals from the client\'s own data and your firm\'s reusable advisory skills library.'],
-    ['Borrowing capability', 'Malaysia DSR model — instantly see headroom for new financing or how to cut interest when over-leveraged.'],
-    ['Tax planning estimator', 'Resident-individual tax (YA2023+) with unused-relief planning opportunities ranked by saving.'],
-    ['Advisory skills library', 'Capture your firm\'s house-style playbooks once; every advisor\'s proposals stay consistent.'],
-    ['Compliance-ready', 'Multi-tenant isolation, role-based access and an audit trail on every action.'],
+    ['All your clients in one place', 'Every client\'s details, policies, documents and review dates kept tidy in one place — nothing slips through the cracks.'],
+    ['Proposals written for you', 'Turn a client\'s numbers into a polished, ready-to-review advisory proposal in minutes instead of a whole evening.'],
+    ['See how much they can borrow', 'Instantly check if a client can safely take on more financing — or how they could cut the interest they\'re already paying.'],
+    ['Spot tax they could save', 'See a client\'s likely Malaysian income tax and exactly which tax reliefs they haven\'t used yet.'],
+    ['Your firm\'s playbook, shared', 'Capture how your best advisors give advice once, so every proposal across the firm stays consistent.'],
+    ['Safe and audit-ready', 'Every change is recorded automatically, and each advisor only sees the clients they\'re meant to.'],
 ];
 
 $stats = [
-    ['', '6', '×', 'faster proposal drafting'],
-    ['', '0', '', 'annual reviews missed'],
-    ['', '3', '', 'built-in Malaysia advisory models'],
-    ['', '100', '%', 'of actions audit-logged'],
+    ['', '6', '×', 'quicker to write a proposal'],
+    ['', '0', '', 'client reviews forgotten'],
+    ['', '3', '', 'Malaysia money tools built in'],
+    ['', '100', '%', 'of changes recorded for you'],
+];
+
+$steps = [
+    ['1', 'Add your client', 'Enter their details, goals, income and policies — or bring over what you already have.'],
+    ['2', 'Get instant insight', 'Borrowing room, possible tax savings and gaps in their plan are worked out for you.'],
+    ['3', 'Draft the proposal', 'One click turns it into a written recommendation you simply review and adjust.'],
+    ['4', 'Never miss a review', 'The system reminds you before each client is due, so follow-ups never fall through.'],
+];
+
+$faqs = [
+    ['Do I need to be tech-savvy to use this?',
+     'No. If you can use online banking, you can use AdvisorOS. There\'s nothing to install — it runs in your web browser.'],
+    ['Is my clients\' information safe?',
+     'Yes. Each firm\'s data is kept completely separate, advisors only see the clients they should, and every action is recorded automatically for compliance.'],
+    ['What does "per report" mean in the pricing?',
+     'A report is an AI-written proposal or a borrowing/tax analysis. Your plan includes a set number each month — you only pay extra if you go beyond that.'],
+    ['Does this replace a licensed financial advisor?',
+     'No. AdvisorOS does the drafting and number-crunching to save you time. A licensed financial advisor still reviews and approves every recommendation — the system never gives advice on its own.'],
+    ['Will it work for a solo advisor or a small firm?',
+     'Yes. Plans scale from a single advisor up to large agencies, so you only pay for what your team needs.'],
+    ['Can I try it before committing?',
+     'Absolutely. Request access and we\'ll set you up and walk you through it.'],
 ];
 
 $testimonials = [
-    ['The annual-review scheduler alone paid for itself. We haven\'t missed a single client review in months.',
-     'Wong S.', 'Principal Consultant, KL'],
-    ['Drafting a proposal used to eat an evening. Now it\'s a coffee break — and every advisor\'s output is consistent.',
+    ['We used to track client reviews on spreadsheets and memory. Now nothing gets forgotten — that alone was worth it.',
+     'Wong S.', 'Practice Principal, KL'],
+    ['Writing a proposal used to take a whole evening. Now it\'s a coffee break, and every advisor\'s work looks consistent.',
      'Devi R.', 'Agency Leader'],
-    ['The DSR and tax views turn a routine review into a real planning conversation. Clients notice.',
+    ['Showing a client what they could borrow or save on tax turns a routine catch-up into a real conversation.',
      'Tan W.K.', 'Licensed Financial Advisor'],
 ];
 
@@ -153,10 +175,29 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
   .lp-refer h2{color:#fff;margin:0 0 8px}
   .lp-refer p{color:#c7d2e3;margin:0 auto;max-width:560px}
   .lp-foot{text-align:center;color:var(--muted);font-size:13px;padding:40px 0 60px}
+  .lp-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .lp-step{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+           padding:22px;box-shadow:var(--shadow)}
+  .lp-step .num{width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;
+                font-weight:800;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+  .lp-step h3{margin:0 0 6px;color:var(--navy);font-size:16px}
+  .lp-step p{margin:0;color:var(--muted);font-size:13.5px;line-height:1.55}
+  .lp-faq{max-width:760px;margin:0 auto}
+  .lp-q{background:var(--card);border:1px solid var(--line);border-radius:12px;
+        margin-bottom:12px;overflow:hidden}
+  .lp-q button{all:unset;display:flex;justify-content:space-between;align-items:center;
+               width:100%;box-sizing:border-box;padding:18px 20px;cursor:pointer;
+               font-weight:600;color:var(--navy);font-size:15px}
+  .lp-q button:focus-visible{outline:2px solid var(--gold);outline-offset:-2px}
+  .lp-q .ic{color:var(--gold);font-size:22px;line-height:1;transition:transform .25s;
+            flex:none;margin-left:14px}
+  .lp-q.open .ic{transform:rotate(45deg)}
+  .lp-q .a{max-height:0;overflow:hidden;transition:max-height .3s ease}
+  .lp-q .a p{margin:0;padding:0 20px 18px;color:var(--muted);font-size:14px;line-height:1.6}
   .reveal{opacity:0;transform:translateY(22px);transition:opacity .6s ease,transform .6s ease}
   .reveal.in{opacity:1;transform:none}
   @media(max-width:820px){
-    .lp-feat,.lp-price,.lp-tst,.lp-split{grid-template-columns:1fr}
+    .lp-feat,.lp-price,.lp-tst,.lp-split,.lp-steps{grid-template-columns:1fr}
     .lp-stats{grid-template-columns:repeat(2,1fr)}
     .lp-hero h1{font-size:32px}.lp-links a:not(.lp-btn){display:none}
   }
@@ -168,8 +209,9 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
     <div class="lp-logo"><?= e(APP_NAME) ?><span>OS</span></div>
     <div class="lp-links">
       <a href="#features">Features</a>
-      <a href="#how">How it helps</a>
+      <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
+      <a href="#faq">FAQ</a>
       <a class="lp-btn ghost" href="<?= e(url('login.php')) ?>">Sign in</a>
     </div>
   </div>
@@ -177,13 +219,13 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
 
 <div class="lp-wrap">
   <header class="lp-hero">
-    <h1>The Client Servicing Operating System<br>for Financial Advisors</h1>
-    <p>Move from scattered spreadsheets and memory-based follow-ups to a
-       structured, compliant advisory operation — with AI-drafted proposals,
-       borrowing-capacity and tax-planning insight built in.</p>
+    <h1>Look after every client<br>without the spreadsheets</h1>
+    <p>AdvisorOS keeps your clients, reviews and paperwork in one tidy place —
+       and writes your advisory proposals for you, with Malaysia borrowing
+       and tax insight built in. Less admin, more advising.</p>
     <div class="lp-cta">
       <a class="lp-btn primary" href="<?= e(url('signup.php')) ?>">Get started</a>
-      <a class="lp-btn ghost" href="#how">See how it helps</a>
+      <a class="lp-btn ghost" href="#how">See how it works</a>
     </div>
   </header>
 
@@ -211,20 +253,34 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
     </div>
   </section>
 
+  <section class="lp-sec reveal">
+    <h2>Up and running in four steps</h2>
+    <p class="sub">No training course required.</p>
+    <div class="lp-steps">
+      <?php foreach ($steps as [$n, $h, $d]): ?>
+        <div class="lp-step">
+          <div class="num"><?= e($n) ?></div>
+          <h3><?= e($h) ?></h3>
+          <p><?= e($d) ?></p>
+        </div>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
   <section class="lp-sec reveal" id="how">
-    <h2>How it helps — in practice</h2>
-    <p class="sub">An illustrative scenario, and a calculator to size it for your firm.</p>
+    <h2>See it in action</h2>
+    <p class="sub">A real-world style example, plus a quick calculator to size it for your firm.</p>
     <div class="lp-split">
       <div class="lp-case">
         <h3>Lim &amp; Partners Advisory</h3>
         <div class="who">Illustrative scenario · 6-advisor firm, Kuala Lumpur</div>
-        <p><span class="lbl">Challenge.</span> Client reviews tracked in
-          spreadsheets and memory; proposals took a full evening to write;
-          advice quality varied by advisor.</p>
-        <p><span class="lbl">With AdvisorOS.</span> The review scheduler
-          flags every client before due date. Advisors draft proposals from
-          the client's own data plus the firm's shared skills library, with
-          DSR and tax insight surfaced automatically.</p>
+        <p><span class="lbl">The problem.</span> Client reviews lived in
+          spreadsheets and people's heads. Writing a proposal took a whole
+          evening. Different advisors gave advice differently.</p>
+        <p><span class="lbl">With AdvisorOS.</span> The system reminds them
+          before every client is due. Advisors turn a client's own numbers
+          into a finished proposal in minutes — with how much the client can
+          safely borrow and the tax they could save worked out for them.</p>
         <p><span class="lbl">Outcome.</span></p>
         <div class="lp-chips">
           <div class="lp-chip">Proposal time <b>~10 min</b><s>was ~60 min</s></div>
@@ -301,6 +357,21 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
     </div>
     <div class="lp-note">Illustrative quotes representing typical workflows,
       not specific client endorsements.</div>
+  </section>
+
+  <section class="lp-sec reveal" id="faq">
+    <h2>Questions, answered simply</h2>
+    <p class="sub">Plain answers — no jargon.</p>
+    <div class="lp-faq">
+      <?php foreach ($faqs as $i => [$q, $a]): ?>
+        <div class="lp-q">
+          <button type="button" aria-expanded="false" aria-controls="fa<?= (int) $i ?>">
+            <span><?= e($q) ?></span><span class="ic" aria-hidden="true">+</span>
+          </button>
+          <div class="a" id="fa<?= (int) $i ?>" role="region"><p><?= e($a) ?></p></div>
+        </div>
+      <?php endforeach; ?>
+    </div>
   </section>
 
   <section class="lp-sec reveal">
@@ -380,6 +451,16 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
     rP.addEventListener('input', recalc);
     recalc();
   }
+
+  // FAQ accordion
+  document.querySelectorAll('.lp-q button').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var q = btn.parentElement, a = q.querySelector('.a');
+      var open = q.classList.toggle('open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      a.style.maxHeight = open ? a.scrollHeight + 'px' : '0px';
+    });
+  });
 })();
 </script>
 </body>
