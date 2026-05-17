@@ -103,10 +103,8 @@
       localStorage.setItem('faos_theme', cur);
     });
 
-    // Refresh CSRF + connectivity banner.
-    FAOS.get('/api/me').then((r) => {
-      if (r && r.data && r.data.csrf) { CSRF = r.data.csrf; window.__CSRF__ = CSRF; }
-    }).catch(() => {});
+    // CSRF is already embedded server-side in every page (window.__CSRF__)
+    // and is stable for the session — no extra /api/me round-trip needed.
   }
 
   FAOS.online = () => navigator.onLine;

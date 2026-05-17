@@ -25,7 +25,8 @@ final class ReconciliationService
             'SELECT si.product_id, SUM(si.qty) qty, SUM(si.line_amount) amount
              FROM sales_transactions st
              JOIN sales_items si ON si.transaction_id = st.id
-             WHERE st.outlet_id = ? AND DATE(st.sold_at) BETWEEN ? AND ?
+             WHERE st.outlet_id = ?
+               AND st.sold_at >= ? AND st.sold_at < ? + INTERVAL 1 DAY
                AND st.status <> ?
              GROUP BY si.product_id',
             [$report['outlet_id'], $report['period_start'], $report['period_end'], 'voided']

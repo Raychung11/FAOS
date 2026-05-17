@@ -229,7 +229,7 @@ final class EInvoiceService
              FROM sales_transactions st
              LEFT JOIN einvoices e ON e.transaction_id = st.id
              WHERE st.company_id=? AND st.outlet_id=?
-               AND DATE(st.sold_at) BETWEEN ? AND ?
+               AND st.sold_at >= ? AND st.sold_at < ? + INTERVAL 1 DAY
                AND e.id IS NULL AND st.status <> 'voided'
              GROUP BY DATE(st.sold_at) ORDER BY d",
             [$company, $outletId, $periodStart, $periodEnd]

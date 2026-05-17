@@ -20,7 +20,8 @@ final class DashboardController extends Controller
         $today = Database::first(
             "SELECT COUNT(*) txns, COALESCE(SUM(total_amount),0) amount, COALESCE(SUM(total_qty),0) qty
              FROM sales_transactions
-             WHERE user_id = ? AND DATE(sold_at) = CURDATE() AND status <> 'voided'",
+             WHERE user_id = ? AND sold_at >= CURDATE() AND sold_at < CURDATE() + INTERVAL 1 DAY
+               AND status <> 'voided'",
             [$u['id']]
         );
         $top = Database::all(
@@ -28,7 +29,8 @@ final class DashboardController extends Controller
              FROM sales_transactions st
              JOIN sales_items si ON si.transaction_id = st.id
              JOIN products p ON p.id = si.product_id
-             WHERE st.user_id = ? AND DATE(st.sold_at) = CURDATE() AND st.status <> 'voided'
+             WHERE st.user_id = ? AND st.sold_at >= CURDATE() AND st.sold_at < CURDATE() + INTERVAL 1 DAY
+               AND st.status <> 'voided'
              GROUP BY p.id ORDER BY qty DESC LIMIT 5",
             [$u['id']]
         );
@@ -60,7 +62,8 @@ final class DashboardController extends Controller
         }
         $sales = Database::first(
             "SELECT COUNT(*) txns, COALESCE(SUM(total_amount),0) amount
-             FROM sales_transactions WHERE outlet_id=? AND DATE(sold_at)=CURDATE()
+             FROM sales_transactions
+             WHERE outlet_id=? AND sold_at >= CURDATE() AND sold_at < CURDATE() + INTERVAL 1 DAY
                AND status <> 'voided'",
             [$outletId]
         );
@@ -68,7 +71,8 @@ final class DashboardController extends Controller
             "SELECT k.name, COALESCE(SUM(st.total_amount),0) amount, COUNT(st.id) txns
              FROM kiosks k
              LEFT JOIN sales_transactions st ON st.kiosk_id=k.id
-                  AND DATE(st.sold_at)=CURDATE() AND st.status <> 'voided'
+                  AND st.sold_at >= CURDATE() AND st.sold_at < CURDATE() + INTERVAL 1 DAY
+                  AND st.status <> 'voided'
              WHERE k.outlet_id=? GROUP BY k.id ORDER BY amount DESC",
             [$outletId]
         );
@@ -85,7 +89,8 @@ final class DashboardController extends Controller
         $cid = $this->companyId();
         $today = Database::first(
             "SELECT COUNT(*) txns, COALESCE(SUM(total_amount),0) amount, COALESCE(SUM(total_qty),0) qty
-             FROM sales_transactions WHERE company_id=? AND DATE(sold_at)=CURDATE()
+             FROM sales_transactions
+             WHERE company_id=? AND sold_at >= CURDATE() AND sold_at < CURDATE() + INTERVAL 1 DAY
                AND status <> 'voided'",
             [$cid]
         );
@@ -135,7 +140,8 @@ final class DashboardController extends Controller
                 "SELECT COUNT(*) total,
                         SUM(result='ok') ok,
                         SUM(result<>'ok') problem
-                 FROM scan_logs WHERE company_id=? AND DATE(created_at)=CURDATE()",
+                 FROM scan_logs
+                 WHERE company_id=? AND created_at >= CURDATE() AND created_at < CURDATE() + INTERVAL 1 DAY",
                 [$cid]
             ),
         ]);
