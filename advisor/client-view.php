@@ -96,6 +96,7 @@ require __DIR__ . '/../includes/header.php';
       <a class="btn-os ghost sm" href="<?= e(url('advisor/risk-diagnostic.php?client_id='.$id)) ?>">Risk diagnostic</a>
       <a class="btn-os ghost sm" href="<?= e(url('advisor/valuation.php?client_id='.$id)) ?>">Valuation</a>
       <a class="btn-os ghost sm" href="<?= e(url('advisor/succession.php?client_id='.$id)) ?>">Succession</a>
+      <a class="btn-os gold sm" href="<?= e(url('advisor/action-plan.php?client_id='.$id)) ?>">Strategic report</a>
     <?php endif; ?>
   </div>
 </div>
