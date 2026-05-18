@@ -218,6 +218,7 @@ function risk_diagnostic(PDO $pdo, ?int $tid, int $clientId): ?array
         . ($line ? '. Flagged: ' . implode(', ', $line) . '.' : '. No material risks flagged.');
 
     return ['dims' => $dims, 'cats' => $cats, 'overall' => $overall,
-            'overall_lbl' => $overallLbl, 'critical' => $crit, 'high' => $high,
+            'overall_lbl' => $overallLbl, 'worst' => $worst,
+            'critical' => $crit, 'high' => $high,
             'alerts' => $alerts, 'text' => $text];
 }
