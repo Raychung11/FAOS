@@ -13,14 +13,17 @@
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/../config/db_config.php';
-require_once __DIR__ . '/../includes/functions.php';
+require_once __DIR__ . '/../includes/bootstrap.php';
 
 $isCli = PHP_SAPI === 'cli';
 $out = static function (string $l) use ($isCli): void {
     echo $isCli ? $l . "\n" : nl2br(htmlspecialchars($l, ENT_QUOTES)) . "<br>\n";
 };
 if (!$isCli) {
+    // Web access is restricted to a signed-in Super Admin; the CLI is
+    // always allowed (used during provisioning).
+    require_login();
+    require_permission('platform.manage');
     header('Content-Type: text/html; charset=utf-8');
     echo '<pre style="font-family:monospace;background:#0B1F3A;color:#cdd6e4;padding:20px">';
 }
