@@ -37,53 +37,53 @@ $featureLabels = [
 ];
 
 $features = [
-    ['All your clients in one place', 'Every client\'s details, policies, documents and review dates kept tidy in one place — nothing slips through the cracks.'],
-    ['Proposals written for you', 'Turn a client\'s numbers into a polished, ready-to-review advisory proposal in minutes instead of a whole evening.'],
-    ['See how much they can borrow', 'Instantly check if a client can safely take on more financing — or how they could cut the interest they\'re already paying.'],
-    ['Spot tax they could save', 'See a client\'s likely Malaysian income tax and exactly which tax reliefs they haven\'t used yet.'],
-    ['Your firm\'s playbook, shared', 'Capture how your best advisors give advice once, so every proposal across the firm stays consistent.'],
-    ['Safe and audit-ready', 'Every change is recorded automatically, and each advisor only sees the clients they\'re meant to.'],
+    ['Personal & business wealth in one view', 'See the owner\'s personal money and their company side-by-side — net worth, what\'s tied up in the business, and how exposed the family really is.'],
+    ['Spot the big risks early', 'A clear health-check across protection, cashflow, personal guarantees, key-person and succession — colour-coded so the danger areas jump out.'],
+    ['Know what the business is worth', 'An indicative company valuation (asset, earnings and cash-flow based) and the owner\'s share — the starting point for selling, succession or raising money.'],
+    ['"If I stop today, is my family OK?"', 'Answers the question every business owner worries about — with a clear funded / not-funded verdict and the exact shortfall.'],
+    ['Smarter tax & financing', 'Salary-vs-dividend that keeps more in the owner\'s pocket, and whether the business can support more borrowing.'],
+    ['One prioritised action plan', 'Everything above turns into a do-this-now / next / later plan you can track — and a polished report written for you.'],
 ];
 
 $stats = [
-    ['', '6', '×', 'quicker to write a proposal'],
-    ['', '0', '', 'client reviews forgotten'],
-    ['', '3', '', 'Malaysia money tools built in'],
+    ['', '8', '', 'advisory engines built in'],
+    ['', '1', '', 'view: personal + business wealth'],
+    ['', '6', '×', 'quicker to produce a report'],
     ['', '100', '%', 'of changes recorded for you'],
 ];
 
 $steps = [
-    ['1', 'Add your client', 'Enter their details, goals, income and policies — or bring over what you already have.'],
-    ['2', 'Get instant insight', 'Borrowing room, possible tax savings and gaps in their plan are worked out for you.'],
-    ['3', 'Draft the proposal', 'One click turns it into a written recommendation you simply review and adjust.'],
-    ['4', 'Never miss a review', 'The system reminds you before each client is due, so follow-ups never fall through.'],
+    ['1', 'Add the owner & company', 'Personal details plus the business — shareholders, directors and a simple set of company numbers.'],
+    ['2', 'Get the full picture', 'Wealth, risks, valuation, succession, tax and financing are worked out for you automatically.'],
+    ['3', 'Get the action plan', 'One prioritised plan — do now / next / later — and a written report, ready to review.'],
+    ['4', 'Track it through', 'Mark actions done as you go and never miss a client\'s review date.'],
 ];
 
 $faqs = [
+    ['Who is this built for?',
+     'Advisers who serve business owners and entrepreneurs — financial advisers, tax and SME consultants, wealth planners. It handles the owner\'s personal money and their company together, not just one side.'],
     ['Do I need to be tech-savvy to use this?',
-     'No. If you can use online banking, you can use AdvisorOS. There\'s nothing to install — it runs in your web browser.'],
+     'No. If you can use online banking, you can use this. There\'s nothing to install — it runs in your web browser.'],
     ['Is my clients\' information safe?',
-     'Yes. Each firm\'s data is kept completely separate, advisors only see the clients they should, and every action is recorded automatically for compliance.'],
+     'Yes. Each firm\'s data is kept completely separate, advisers only see the clients they should, and every action is recorded automatically for compliance.'],
+    ['Is this giving tax, legal or investment advice?',
+     'No. It produces clear estimates and a draft plan to save you time. A licensed adviser still reviews and approves everything — the system never advises on its own.'],
     ['What does "per report" mean in the pricing?',
-     'A report is an AI-written proposal or a borrowing/tax analysis. Your plan includes a set number each month — you only pay extra if you go beyond that.'],
-    ['Does this replace a licensed financial advisor?',
-     'No. AdvisorOS does the drafting and number-crunching to save you time. A licensed financial advisor still reviews and approves every recommendation — the system never gives advice on its own.'],
-    ['Will it work for a solo advisor or a small firm?',
-     'Yes. Plans scale from a single advisor up to large agencies, so you only pay for what your team needs.'],
-    ['Can I try it before committing?',
-     'Absolutely. Request access and we\'ll set you up and walk you through it.'],
+     'A report is one generated analysis — a proposal, valuation, risk diagnostic, succession review or the strategic plan. Your plan includes a monthly allowance; you only pay more if you go over.'],
+    ['Will it work for a solo adviser or a small firm?',
+     'Yes. Plans scale from a single adviser up to large agencies, so you only pay for what your team needs.'],
 ];
 
 $testimonials = [
-    ['We used to track client reviews on spreadsheets and memory. Now nothing gets forgotten — that alone was worth it.',
+    ['Seeing a client\'s personal and business wealth on one screen changed the conversation completely — we\'re advising the owner, not selling a product.',
      'Wong S.', 'Practice Principal, KL'],
-    ['Writing a proposal used to take a whole evening. Now it\'s a coffee break, and every advisor\'s work looks consistent.',
+    ['The "if you stop today, is your family OK?" report lands every time. It turns a routine review into real planning work.',
      'Devi R.', 'Agency Leader'],
-    ['Showing a client what they could borrow or save on tax turns a routine catch-up into a real conversation.',
-     'Tan W.K.', 'Licensed Financial Advisor'],
+    ['Valuation, tax structuring and a prioritised action plan in minutes — work that used to need three different specialists.',
+     'Tan W.K.', 'Licensed Financial Adviser'],
 ];
 
-$pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
+$pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -219,10 +219,11 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
 
 <div class="lp-wrap">
   <header class="lp-hero">
-    <h1>Look after every client<br>without the spreadsheets</h1>
-    <p>AdvisorOS keeps your clients, reviews and paperwork in one tidy place —
-       and writes your advisory proposals for you, with Malaysia borrowing
-       and tax insight built in. Less admin, more advising.</p>
+    <h1>The wealth advisory platform<br>for business owners</h1>
+    <p>AdvisorOS shows an entrepreneur's personal <em>and</em> business wealth
+       in one place — risks, company value, succession, tax and financing —
+       then turns it into a prioritised plan and a written report. Built for
+       Malaysia. Less admin, deeper advice.</p>
     <div class="lp-cta">
       <a class="lp-btn primary" href="<?= e(url('signup.php')) ?>">Get started</a>
       <a class="lp-btn ghost" href="#how">See how it works</a>
@@ -242,8 +243,8 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
   </section>
 
   <section class="lp-sec reveal" id="features">
-    <h2>Everything an advisory firm needs</h2>
-    <p class="sub">One platform, from first lead to lifelong servicing.</p>
+    <h2>Everything you need to advise a business owner</h2>
+    <p class="sub">Personal and business wealth, risk, valuation, succession, tax — one platform.</p>
     <div class="lp-feat">
       <?php foreach ($features as [$t, $d]): ?>
         <div class="card-os"><div class="card-os-body">
@@ -272,20 +273,21 @@ $pageTitle = 'AdvisorOS — The Client Servicing OS for Financial Advisors';
     <p class="sub">A real-world style example, plus a quick calculator to size it for your firm.</p>
     <div class="lp-split">
       <div class="lp-case">
-        <h3>Lim &amp; Partners Advisory</h3>
-        <div class="who">Illustrative scenario · 6-advisor firm, Kuala Lumpur</div>
-        <p><span class="lbl">The problem.</span> Client reviews lived in
-          spreadsheets and people's heads. Writing a proposal took a whole
-          evening. Different advisors gave advice differently.</p>
-        <p><span class="lbl">With AdvisorOS.</span> The system reminds them
-          before every client is due. Advisors turn a client's own numbers
-          into a finished proposal in minutes — with how much the client can
-          safely borrow and the tax they could save worked out for them.</p>
+        <h3>Advising an SME owner</h3>
+        <div class="who">Illustrative scenario · founder of a Sdn Bhd, Kuala Lumpur</div>
+        <p><span class="lbl">The problem.</span> The owner's money and the
+          company's were all mixed up. Nobody could say what the business was
+          worth, how exposed the family was, or whether they could survive if
+          the founder stopped.</p>
+        <p><span class="lbl">With AdvisorOS.</span> The adviser captures the
+          person and the company once. In minutes they see combined net worth,
+          the big risks, an indicative business value, the succession answer,
+          and a tax-smarter way to take money out.</p>
         <p><span class="lbl">Outcome.</span></p>
         <div class="lp-chips">
-          <div class="lp-chip">Proposal time <b>~10 min</b><s>was ~60 min</s></div>
-          <div class="lp-chip">Reviews missed <b>0</b><s>was several / yr</s></div>
-          <div class="lp-chip">Advice consistency <b>Firm-wide</b><s>was advisor-by-advisor</s></div>
+          <div class="lp-chip">Full picture <b>Minutes</b><s>was weeks &amp; 3 specialists</s></div>
+          <div class="lp-chip">"Family OK if I stop?" <b>Answered</b><s>was guesswork</s></div>
+          <div class="lp-chip">Next steps <b>One plan</b><s>was scattered notes</s></div>
         </div>
       </div>
 
