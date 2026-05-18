@@ -71,8 +71,9 @@ require __DIR__ . '/includes/auth_header.php';
 ?>
 <?php if ($sent): ?>
   <h2>You're on the list</h2>
-  <div class="sub">Thanks for your interest in AdvisorOS. Our team will review
-    your request and reach out shortly to set up your firm's workspace.</div>
+  <div class="sub">Thanks for your interest in AdvisorOS. We'll review your
+    request and reach out shortly to set up your workspace and walk you
+    through advising business owners on the platform.</div>
   <a class="btn-os" style="width:100%;justify-content:center"
      href="<?= e(url('index.php')) ?>">Back to home</a>
   <p class="muted mt-3" style="font-size:12.5px;text-align:center">
@@ -80,7 +81,9 @@ require __DIR__ . '/includes/auth_header.php';
   </p>
 <?php else: ?>
   <h2>Request access</h2>
-  <div class="sub">Tell us about your firm and we'll get you set up.</div>
+  <div class="sub">The wealth advisory platform for business owners — personal
+    and business wealth, risk, valuation, succession, tax and financing in one
+    place. Tell us about your practice and we'll get you set up.</div>
   <form method="post" action="<?= e(url('signup.php')) ?>" novalidate>
     <?= csrf_field() ?>
     <div style="position:absolute;left:-9999px" aria-hidden="true">
