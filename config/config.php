@@ -62,7 +62,30 @@ date_default_timezone_set((string) env('APP_TIMEZONE', 'Asia/Kuala_Lumpur'));
 define('APP_NAME',  (string) env('APP_NAME', 'AdvisorOS'));
 define('APP_ENV',   (string) env('APP_ENV', 'production'));
 define('APP_DEBUG', (bool)   env('APP_DEBUG', false));
-define('APP_URL',   rtrim((string) env('APP_URL', ''), '/'));
+/**
+ * Base URL. An explicit APP_URL in .env is authoritative and
+ * recommended for production. When it is blank we auto-detect
+ * scheme + host + the sub-directory the app lives in (derived from
+ * the filesystem vs DOCUMENT_ROOT, so it is correct for every entry
+ * point — root or sub-folder installs alike). This is what makes the
+ * stylesheet, links and redirects resolve when APP_URL is unset.
+ */
+$appUrl = trim((string) env('APP_URL', ''));
+if ($appUrl === '') {
+    $https = (!empty($_SERVER['HTTPS']) && strtolower((string) $_SERVER['HTTPS']) !== 'off')
+        || (($_SERVER['SERVER_PORT'] ?? null) == 443)
+        || (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https');
+    $host = $_SERVER['HTTP_HOST'] ?? $_SERVER['SERVER_NAME'] ?? 'localhost';
+    $base = '';
+    $docroot = !empty($_SERVER['DOCUMENT_ROOT']) ? realpath($_SERVER['DOCUMENT_ROOT']) : false;
+    $appdir  = realpath(APP_ROOT);
+    if ($docroot && $appdir && str_starts_with($appdir, $docroot)) {
+        $base = '/' . trim(str_replace('\\', '/', substr($appdir, strlen($docroot))), '/');
+        if ($base === '/') { $base = ''; }
+    }
+    $appUrl = ($https ? 'https' : 'http') . '://' . $host . $base;
+}
+define('APP_URL', rtrim($appUrl, '/'));
 
 define('UPLOAD_DIR',   APP_ROOT . '/uploads');
 define('MAX_UPLOAD_MB', (int) env('MAX_UPLOAD_MB', 10));

@@ -83,6 +83,16 @@ $testimonials = [
      'Tan W.K.', 'Licensed Financial Adviser'],
 ];
 
+// Optional hero photo: drop a file at assets/img/hero.(webp|jpg|png).
+// If none exists the text hero shows on its own — never a broken image.
+$heroImg = null;
+foreach (['webp', 'jpg', 'jpeg', 'png'] as $ext) {
+    if (is_file(APP_ROOT . '/assets/img/hero.' . $ext)) {
+        $heroImg = 'assets/img/hero.' . $ext;
+        break;
+    }
+}
+
 $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
 ?>
 <!DOCTYPE html>
@@ -112,6 +122,9 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
   .lp-hero h1{font-size:42px;line-height:1.15;margin:0 0 16px;color:var(--navy);font-weight:800}
   .lp-hero p{font-size:18px;color:var(--muted);max-width:640px;margin:0 auto 28px}
   .lp-cta{display:inline-flex;gap:12px;flex-wrap:wrap;justify-content:center}
+  .lp-hero-img{margin:42px auto 0;max-width:920px}
+  .lp-hero-img img{width:100%;height:auto;display:block;border-radius:16px;
+                   border:1px solid var(--line);box-shadow:0 18px 50px rgba(11,31,58,.16)}
   .lp-btn{display:inline-block;padding:13px 26px;border-radius:12px;font-weight:600;
           text-decoration:none;border:1px solid transparent;cursor:pointer}
   .lp-btn.primary{background:var(--gold);color:#1a1405}
@@ -228,6 +241,12 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
       <a class="lp-btn primary" href="<?= e(url('signup.php')) ?>">Get started</a>
       <a class="lp-btn ghost" href="#how">See how it works</a>
     </div>
+    <?php if ($heroImg): ?>
+      <div class="lp-hero-img">
+        <img src="<?= e(url($heroImg)) ?>" alt="AdvisorOS in use"
+             loading="lazy" decoding="async">
+      </div>
+    <?php endif; ?>
   </header>
 
   <section class="lp-sec reveal" style="padding-top:0">
