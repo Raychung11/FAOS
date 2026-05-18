@@ -181,6 +181,47 @@ try {
         'proposal'=>25,'capability'=>8,'tax'=>6,'total'=>39,
     ])]);
 
+    // --- Entrepreneur business profile (companies layer) ---------
+    $hasCo = $pdo->prepare('SELECT id FROM companies WHERE client_id=? AND name=? LIMIT 1');
+    $hasCo->execute([$clientId, 'Lim Trading Sdn Bhd']);
+    $companyId = (int) $hasCo->fetchColumn();
+    if (!$companyId) {
+        $pdo->prepare(
+            'INSERT INTO companies
+              (tenant_id,client_id,name,registration_no,entity_type,industry,
+               incorporation_date,ownership_pct,status,notes,created_by)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?)'
+        )->execute([$tenantId,$clientId,'Lim Trading Sdn Bhd','201501012345','sdn_bhd',
+            'Wholesale & distribution','2015-03-01',70.00,'active',
+            'Primary operating company.',$creator]);
+        $companyId = (int) $pdo->lastInsertId();
+
+        $stk = $pdo->prepare(
+            'INSERT INTO company_stakeholders
+              (tenant_id,company_id,name,nric_passport,relationship,is_shareholder,
+               shareholding_pct,is_director,is_beneficiary,benefit_pct,email,phone,
+               notes,created_by)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+        );
+        $stk->execute([$tenantId,$companyId,'Sarah Lim','DEMO-CLIENT-001','self',1,70.00,1,1,60.00,
+            'sarah@example.com','+60123456789','Founder & managing director.',$creator]);
+        $stk->execute([$tenantId,$companyId,'David Lim','DEMO-SPOUSE-001','spouse',1,30.00,1,0,0.00,
+            '','+60127654321','Co-founder.',$creator]);
+        $stk->execute([$tenantId,$companyId,'Emma Lim','DEMO-CHILD-001','child','',0.00,0,1,40.00,
+            '','','Succession beneficiary.',$creator]);
+
+        $pdo->prepare(
+            'INSERT INTO business_financials
+              (tenant_id,company_id,snapshot_date,revenue,ebitda,net_profit,
+               total_assets,total_liabilities,receivables,inventory,cash,
+               bank_loans,shareholder_loans,personal_guarantee,owner_remuneration,
+               dividends_paid,created_by)
+             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)'
+        )->execute([$tenantId,$companyId,date('Y-m-d'),3200000,560000,410000,
+            2800000,1500000,620000,480000,310000,900000,250000,800000,180000,
+            120000,$creator]);
+    }
+
     // --- Risk profile --------------------------------------------
     $pdo->prepare(
         'INSERT INTO risk_profiles
