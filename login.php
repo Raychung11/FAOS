@@ -55,6 +55,8 @@ require __DIR__ . '/includes/auth_header.php';
   </div>
   <button type="submit" class="btn-os" style="width:100%;justify-content:center">Sign in</button>
 </form>
+<a class="btn-os ghost" href="<?= e(url('index.php')) ?>"
+   style="width:100%;justify-content:center;margin-top:10px">← Back to home</a>
 <p class="muted mt-3" style="font-size:12.5px;text-align:center">
   Protected by session security, CSRF protection and brute-force throttling.
 </p>
