@@ -5,6 +5,7 @@ require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/ai.php';
 require_once __DIR__ . '/../includes/insight.php';
 require_once __DIR__ . '/../includes/wealth.php';
+require_once __DIR__ . '/../includes/risk_engine.php';
 require_once __DIR__ . '/../includes/skills.php';
 require_once __DIR__ . '/../includes/billing.php';
 require_permission('proposals.manage');
@@ -84,6 +85,7 @@ if (is_post() && isset($_POST['ai_draft'])) {
     $cap  = capability_summary($pdo, $tid, $clientId);
     $tax  = tax_summary($pdo, $tid, $clientId);
     $wlth = wealth_summary($pdo, $tid, $clientId);
+    $rdg  = risk_diagnostic($pdo, $tid, $clientId);
 
     $facts = "Client: {$client['full_name']}\n"
         . 'Occupation: ' . ($client['occupation'] ?: 'n/a')
@@ -101,6 +103,7 @@ if (is_post() && isset($_POST['ai_draft'])) {
     if ($cap)  { $facts .= $cap['text'] . "\n"; }
     if ($tax)  { $facts .= $tax['text'] . "\n"; }
     if ($wlth) { $facts .= $wlth['text'] . "\n"; }
+    if ($rdg)  { $facts .= $rdg['text'] . "\n"; }
 
     $skillBlock = '';
     foreach ($activeSkills as $s) {

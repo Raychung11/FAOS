@@ -60,7 +60,7 @@ require __DIR__ . '/../includes/header.php';
     <div class="stat-foot">per month</div></div>
   <div class="stat accent"><div class="stat-label">Reports Used</div>
     <div class="stat-value"><?= (int) $bill['used'] ?> <span class="muted" style="font-size:13px">/ <?= (int) $bill['quota'] ?> free</span></div>
-    <div class="stat-foot"><?= (int) $usage['proposal'] ?> proposal · <?= (int) $usage['capability'] ?> capability · <?= (int) $usage['tax'] ?> tax · <?= (int) $usage['wealth'] ?> wealth</div></div>
+    <div class="stat-foot"><?= (int) $usage['proposal'] ?> proposal · <?= (int) $usage['capability'] ?> capability · <?= (int) $usage['tax'] ?> tax · <?= (int) $usage['wealth'] ?> wealth · <?= (int) $usage['risk'] ?> risk</div></div>
   <div class="stat accent"><div class="stat-label">Usage Charges</div>
     <div class="stat-value">RM <?= money($bill['usage_cost']) ?></div>
     <div class="stat-foot"><?= (int) $bill['overage'] ?> over quota @ RM <?= money($bill['price']) ?></div></div>
