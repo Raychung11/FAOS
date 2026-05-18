@@ -7,6 +7,8 @@ require_once __DIR__ . '/../includes/insight.php';
 require_once __DIR__ . '/../includes/wealth.php';
 require_once __DIR__ . '/../includes/risk_engine.php';
 require_once __DIR__ . '/../includes/succession.php';
+require_once __DIR__ . '/../includes/corptax.php';
+require_once __DIR__ . '/../includes/sme_finance.php';
 require_once __DIR__ . '/../includes/skills.php';
 require_once __DIR__ . '/../includes/billing.php';
 require_permission('proposals.manage');
@@ -89,6 +91,8 @@ if (is_post() && isset($_POST['ai_draft'])) {
     $rdg  = risk_diagnostic($pdo, $tid, $clientId);
     $vln  = client_valuation($pdo, $tid, $clientId);
     $suc  = succession_report($pdo, $tid, $clientId);
+    $ctx  = corptax_client_summary($pdo, $tid, $clientId);
+    $sme  = sme_client_summary($pdo, $tid, $clientId);
 
     $facts = "Client: {$client['full_name']}\n"
         . 'Occupation: ' . ($client['occupation'] ?: 'n/a')
@@ -109,6 +113,8 @@ if (is_post() && isset($_POST['ai_draft'])) {
     if ($rdg)  { $facts .= $rdg['text'] . "\n"; }
     if (!empty($vln['rows'])) { $facts .= $vln['text'] . "\n"; }
     if ($suc)  { $facts .= $suc['text'] . "\n"; }
+    if ($ctx)  { $facts .= $ctx['text'] . "\n"; }
+    if ($sme)  { $facts .= $sme['text'] . "\n"; }
 
     $skillBlock = '';
     foreach ($activeSkills as $s) {

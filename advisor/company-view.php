@@ -102,7 +102,9 @@ require __DIR__ . '/../includes/header.php';
       · <?= e($co['registration_no'] ?: 'no SSM no.') ?>
       · owned by <?= e($co['client_name']) ?></span>
   </div>
-  <div style="display:flex;gap:8px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-structuring.php?company_id='.$id)) ?>">Tax structuring</a>
+    <a class="btn-os ghost sm" href="<?= e(url('advisor/sme-financing.php?company_id='.$id)) ?>">SME financing</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/companies.php?client_id='.$clientId.'&edit='.$id)) ?>">Edit company</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/companies.php?client_id='.$clientId)) ?>">All companies</a>
   </div>
