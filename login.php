@@ -45,7 +45,14 @@ require __DIR__ . '/includes/auth_header.php';
   </div>
   <div class="form-row">
     <label for="password">Password</label>
-    <input type="password" id="password" name="password" required>
+    <div style="position:relative">
+      <input type="password" id="password" name="password" required
+             style="width:100%;padding-right:62px;box-sizing:border-box">
+      <button type="button" id="pwToggle" aria-label="Show password" aria-pressed="false"
+        style="position:absolute;top:50%;right:10px;transform:translateY(-50%);
+               background:none;border:0;cursor:pointer;font-size:12.5px;
+               font-weight:600;color:var(--navy-600)">Show</button>
+    </div>
   </div>
   <div class="form-row" style="display:flex;justify-content:space-between;align-items:center">
     <label style="font-weight:500;display:flex;gap:8px;align-items:center;margin:0">
@@ -60,4 +67,18 @@ require __DIR__ . '/includes/auth_header.php';
 <p class="muted mt-3" style="font-size:12.5px;text-align:center">
   Protected by session security, CSRF protection and brute-force throttling.
 </p>
+<script>
+(function () {
+  var b = document.getElementById('pwToggle'), p = document.getElementById('password');
+  if (!b || !p) return;
+  b.addEventListener('click', function () {
+    var show = p.type === 'password';
+    p.type = show ? 'text' : 'password';
+    b.textContent = show ? 'Hide' : 'Show';
+    b.setAttribute('aria-pressed', show ? 'true' : 'false');
+    b.setAttribute('aria-label', show ? 'Hide password' : 'Show password');
+    p.focus();
+  });
+})();
+</script>
 <?php require __DIR__ . '/includes/auth_footer.php'; ?>
