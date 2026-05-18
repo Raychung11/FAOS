@@ -69,37 +69,63 @@ $docs = $doc->fetchAll();
 $pageTitle = $c['full_name'];
 require __DIR__ . '/../includes/header.php';
 ?>
-<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px">
   <div>
     <h2 style="margin:0;color:var(--navy)"><?= e($c['full_name']) ?></h2>
     <span class="muted"><?= e($c['occupation'] ?: '—') ?> · Advisor: <?= e($c['advisor_name'] ?: '—') ?></span>
   </div>
-  <div>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
     <a class="btn-os ghost sm" href="<?= e(url('advisor/clients.php')) ?>">Back</a>
     <?php if (can('clients.manage')): ?>
       <a class="btn-os sm" href="<?= e(url('advisor/client-edit.php?id='.$id)) ?>">Edit profile</a>
     <?php endif; ?>
-    <?php if (can('reviews.manage')): ?>
-      <a class="btn-os gold sm" href="<?= e(url('advisor/review-edit.php?client_id='.$id)) ?>">Start annual review</a>
-    <?php endif; ?>
-    <?php if (can('proposals.manage')): ?>
-      <a class="btn-os sm" href="<?= e(url('advisor/proposal-edit.php?client_id='.$id)) ?>">Generate proposal</a>
-    <?php endif; ?>
-    <?php if (can('risk.manage')): ?>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/risk-edit.php?client_id='.$id)) ?>">Assess risk profile</a>
+  </div>
+</div>
+
+<?php
+$svc = can('reviews.manage') || can('proposals.manage') || can('risk.manage');
+if ($svc || can('financial.manage')):
+?>
+<div class="card-os" style="margin-bottom:18px">
+  <div class="card-os-body" style="display:flex;flex-direction:column;gap:12px;padding:16px 18px">
+    <style>
+      .actgrp{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+      .actlbl{font-size:11px;font-weight:700;text-transform:uppercase;
+              letter-spacing:.05em;color:var(--muted);min-width:104px}
+    </style>
+    <?php if ($svc): ?>
+      <div class="actgrp">
+        <span class="actlbl">Servicing</span>
+        <?php if (can('reviews.manage')): ?>
+          <a class="btn-os gold sm" href="<?= e(url('advisor/review-edit.php?client_id='.$id)) ?>">Start annual review</a>
+        <?php endif; ?>
+        <?php if (can('proposals.manage')): ?>
+          <a class="btn-os sm" href="<?= e(url('advisor/proposal-edit.php?client_id='.$id)) ?>">Generate proposal</a>
+        <?php endif; ?>
+        <?php if (can('risk.manage')): ?>
+          <a class="btn-os ghost sm" href="<?= e(url('advisor/risk-edit.php?client_id='.$id)) ?>">Assess risk profile</a>
+        <?php endif; ?>
+      </div>
     <?php endif; ?>
     <?php if (can('financial.manage')): ?>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/capability.php?client_id='.$id)) ?>">Borrowing capability</a>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/tax.php?client_id='.$id)) ?>">Tax planning</a>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/companies.php?client_id='.$id)) ?>">Business profile</a>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/wealth.php?client_id='.$id)) ?>">Wealth analysis</a>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/risk-diagnostic.php?client_id='.$id)) ?>">Risk diagnostic</a>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/valuation.php?client_id='.$id)) ?>">Valuation</a>
-      <a class="btn-os ghost sm" href="<?= e(url('advisor/succession.php?client_id='.$id)) ?>">Succession</a>
-      <a class="btn-os gold sm" href="<?= e(url('advisor/action-plan.php?client_id='.$id)) ?>">Strategic report</a>
+      <div class="actgrp">
+        <span class="actlbl">Advisory tools</span>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/wealth.php?client_id='.$id)) ?>">Wealth analysis</a>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/risk-diagnostic.php?client_id='.$id)) ?>">Risk diagnostic</a>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/companies.php?client_id='.$id)) ?>">Business profile</a>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/valuation.php?client_id='.$id)) ?>">Valuation</a>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/succession.php?client_id='.$id)) ?>">Succession</a>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/capability.php?client_id='.$id)) ?>">Borrowing capability</a>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/tax.php?client_id='.$id)) ?>">Tax planning</a>
+      </div>
+      <div class="actgrp">
+        <span class="actlbl">Report</span>
+        <a class="btn-os gold sm" href="<?= e(url('advisor/action-plan.php?client_id='.$id)) ?>">Strategic report</a>
+      </div>
     <?php endif; ?>
   </div>
 </div>
+<?php endif; ?>
 
 <div class="grid cols-3" style="margin-bottom:18px">
   <div class="stat accent"><div class="stat-label">Financial Health Score</div>
