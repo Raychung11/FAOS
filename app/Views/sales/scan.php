@@ -112,8 +112,8 @@ mref.addEventListener('keydown', e => { if (e.key === 'Enter') manualAdd(); });
 const scanner = new FAOSScanner(document.getElementById('video'), resolve);
 const stateEl = document.getElementById('scanState');
 if (scanner.supported()) {
-  scanner.start().then(() => stateEl.textContent = 'Camera active')
-    .catch(() => { stateEl.textContent = 'Camera blocked — use manual'; document.getElementById('scanWrap').classList.add('hidden'); });
+  scanner.start().then(() => stateEl.textContent = 'Camera active — point at QR')
+    .catch((e) => { stateEl.textContent = e.message || 'Camera unavailable — use input'; document.getElementById('scanWrap').classList.add('hidden'); document.getElementById('manualRef').focus(); });
 } else {
   stateEl.textContent = 'Use manual entry';
   document.getElementById('scanWrap').classList.add('hidden');

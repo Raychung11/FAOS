@@ -1,47 +1,96 @@
 /* FAOS QR scanner.
-   Uses the native BarcodeDetector API (Chrome on Android = the primary kiosk
-   device) with a manual-entry fallback for unsupported browsers. Zero deps. */
+   Camera scanning that works on EVERY device:
+   - Native BarcodeDetector when present (Chrome/Edge, fastest).
+   - jsQR fallback (iOS Safari, Firefox, desktop) over a canvas.
+   - Manual / hardware keyboard-wedge entry is always available in the page.
+   Zero network deps (jsQR vendored locally). */
 (function () {
   'use strict';
 
   const FAOS = window.FAOS;
+  const hasCamera = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
 
   function Scanner(videoEl, onResult) {
     this.video = videoEl;
     this.onResult = onResult;
     this.stream = null;
     this.timer = null;
+    this.canvas = null;
     this.last = { code: '', t: 0 };
     this.detector = ('BarcodeDetector' in window)
       ? new window.BarcodeDetector({ formats: ['qr_code'] })
       : null;
+    this.mode = this.detector ? 'native' : (window.jsQR || hasCamera ? 'jsqr' : 'none');
   }
 
-  Scanner.prototype.supported = function () { return !!this.detector; };
+  // We can scan as long as a camera is reachable; jsQR covers browsers
+  // without BarcodeDetector. Only false when there's no camera API at all.
+  Scanner.prototype.supported = function () {
+    return !!this.detector || hasCamera;
+  };
+
+  Scanner.prototype._emit = function (raw) {
+    const val = (raw || '').trim();
+    if (!val) return;
+    const now = Date.now();
+    if (val === this.last.code && now - this.last.t < 2500) return; // de-dupe
+    this.last = { code: val, t: now };
+    if (navigator.vibrate) navigator.vibrate(60);
+    this.onResult(val);
+  };
+
+  Scanner.prototype._decodeFrame = function () {
+    const v = this.video;
+    if (!v || !v.videoWidth) return null;
+    if (!window.jsQR) return null; // vendored lib still loading (deferred)
+    const maxW = 640;
+    const scale = Math.min(1, maxW / v.videoWidth);
+    const w = Math.round(v.videoWidth * scale);
+    const h = Math.round(v.videoHeight * scale);
+    if (!this.canvas) this.canvas = document.createElement('canvas');
+    this.canvas.width = w;
+    this.canvas.height = h;
+    const ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(v, 0, 0, w, h);
+    const img = ctx.getImageData(0, 0, w, h);
+    const r = window.jsQR(img.data, w, h, { inversionAttempts: 'attemptBoth' });
+    return r && r.data ? r.data : null;
+  };
 
   Scanner.prototype.start = async function () {
-    if (!this.detector) throw new Error('BarcodeDetector unsupported');
-    this.stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment' },
-    });
+    if (!hasCamera) {
+      throw new Error('Camera not available on this browser — use the input box / a USB scanner');
+    }
+    try {
+      this.stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: 'environment' } }, audio: false,
+      });
+    } catch (e) {
+      const m = {
+        NotAllowedError: 'Camera permission denied — allow it or use the input box',
+        NotFoundError: 'No camera found — use the input box / a USB scanner',
+        NotReadableError: 'Camera busy (another app is using it)',
+        SecurityError: 'Camera needs HTTPS',
+      }[e && e.name] || ('Camera error: ' + (e && e.message || e));
+      throw new Error(m);
+    }
     this.video.srcObject = this.stream;
-    await this.video.play();
+    this.video.setAttribute('playsinline', '');
+    this.video.muted = true;
+    try { await this.video.play(); } catch (e) { /* iOS sometimes rejects; stream still renders */ }
+
     const loop = async () => {
       if (!this.stream) return;
       try {
-        const codes = await this.detector.detect(this.video);
-        if (codes && codes.length) {
-          const val = codes[0].rawValue.trim();
-          const now = Date.now();
-          // De-dupe: ignore same code within 2.5s (duplicate scan prevention).
-          if (val && !(val === this.last.code && now - this.last.t < 2500)) {
-            this.last = { code: val, t: now };
-            if (navigator.vibrate) navigator.vibrate(60);
-            this.onResult(val);
-          }
+        if (this.detector) {
+          const codes = await this.detector.detect(this.video);
+          if (codes && codes.length) this._emit(codes[0].rawValue);
+        } else {
+          const v = this._decodeFrame();
+          if (v) this._emit(v);
         }
-      } catch (e) { /* frame skip */ }
-      this.timer = setTimeout(loop, 250);
+      } catch (e) { /* skip frame */ }
+      this.timer = setTimeout(loop, this.detector ? 250 : 180);
     };
     loop();
   };

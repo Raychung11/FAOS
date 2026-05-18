@@ -112,7 +112,7 @@ document.getElementById('submit').addEventListener('click', async () => {
 
 const sc = new FAOSScanner(document.getElementById('v'), lookup);
 if (sc.supported()) {
-  sc.start().then(() => document.getElementById('ss').textContent = 'Camera active')
-    .catch(() => { document.getElementById('ss').textContent = 'Manual entry'; document.getElementById('sw').classList.add('hidden'); });
+  sc.start().then(() => document.getElementById('ss').textContent = 'Camera active — point at QR')
+    .catch((e) => { document.getElementById('ss').textContent = e.message || 'Camera unavailable — use input'; document.getElementById('sw').classList.add('hidden'); document.getElementById('ref').focus(); });
 } else { document.getElementById('ss').textContent = 'Manual entry'; document.getElementById('sw').classList.add('hidden'); }
 </script>

@@ -16,6 +16,9 @@ $nav = fn (string $href, string $label) =>
 <!-- Loaded in <head> so FAOS / FAOSScanner are defined BEFORE any page's
      inline content script runs (those execute during body parsing). -->
 <script src="<?= base_url('/assets/js/app.js') ?>"></script>
+<?php if (in_array($path, ['/sales', '/stock'], true)): ?>
+<script src="<?= base_url('/assets/js/jsQR.js') ?>"></script>
+<?php endif; ?>
 <script src="<?= base_url('/assets/js/scanner.js') ?>"></script>
 </head>
 <body>
