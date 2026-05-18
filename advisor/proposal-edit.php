@@ -4,6 +4,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/ai.php';
 require_once __DIR__ . '/../includes/insight.php';
+require_once __DIR__ . '/../includes/wealth.php';
 require_once __DIR__ . '/../includes/skills.php';
 require_once __DIR__ . '/../includes/billing.php';
 require_permission('proposals.manage');
@@ -80,8 +81,9 @@ if (is_post() && isset($_POST['ai_draft'])) {
     $title        = (string) input('title', '') ?: $title;
     $pickedSkills = array_map('intval', (array) ($_POST['skills'] ?? []));
 
-    $cap = capability_summary($pdo, $tid, $clientId);
-    $tax = tax_summary($pdo, $tid, $clientId);
+    $cap  = capability_summary($pdo, $tid, $clientId);
+    $tax  = tax_summary($pdo, $tid, $clientId);
+    $wlth = wealth_summary($pdo, $tid, $clientId);
 
     $facts = "Client: {$client['full_name']}\n"
         . 'Occupation: ' . ($client['occupation'] ?: 'n/a')
@@ -96,8 +98,9 @@ if (is_post() && isset($_POST['ai_draft'])) {
             . 'insurance RM ' . money($fin['insurance_coverage']) . "; "
             . 'emergency fund RM ' . money($fin['emergency_fund']) . "\n";
     }
-    if ($cap) { $facts .= $cap['text'] . "\n"; }
-    if ($tax) { $facts .= $tax['text'] . "\n"; }
+    if ($cap)  { $facts .= $cap['text'] . "\n"; }
+    if ($tax)  { $facts .= $tax['text'] . "\n"; }
+    if ($wlth) { $facts .= $wlth['text'] . "\n"; }
 
     $skillBlock = '';
     foreach ($activeSkills as $s) {

@@ -23,7 +23,7 @@ function referral_credit_rm(): float
     return (float) env('REFERRAL_CREDIT_RM', 200);
 }
 
-const REPORT_TYPES = ['proposal', 'capability', 'tax'];
+const REPORT_TYPES = ['proposal', 'capability', 'tax', 'wealth'];
 
 /** Per-report commercial terms for a plan row (price, free quota). */
 function plan_report_terms(?array $plan): array
