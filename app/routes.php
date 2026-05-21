@@ -30,6 +30,7 @@ $r->post('/logout',[AuthController::class, 'logout']);
 
 // ---- Web pages -------------------------------------------------------------
 $r->get('/',          [PageController::class, 'home']);
+$r->get('/welcome',   [PageController::class, 'landing']);
 $r->get('/worker',    [PageController::class, 'workerDashboard']);
 $r->get('/outlet',    [PageController::class, 'outletDashboard']);
 $r->get('/hq',        [PageController::class, 'hqDashboard']);

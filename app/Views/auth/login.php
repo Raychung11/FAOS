@@ -21,5 +21,6 @@
     <p class="muted center" style="font-size:12px;margin-top:18px">
       Demo: admin/admin123 · manager/manager123 · worker1/worker123
     </p>
+    <p class="center" style="margin-top:8px"><a href="<?= base_url('/welcome') ?>" style="font-size:12px;color:var(--muted);text-decoration:none">← About FAOS BOS</a></p>
   </div>
 </div>

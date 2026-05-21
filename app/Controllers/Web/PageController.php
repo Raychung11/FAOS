@@ -13,7 +13,11 @@ final class PageController extends Controller
 {
     public function home(Request $req): void
     {
-        Auth::requireLogin($req);
+        if (!Auth::check()) {
+            // Visitors land on the public marketing page; logged-in users
+            // jump straight to their dashboard.
+            Response::redirect(base_url('/welcome'));
+        }
         $role = Auth::user()['role_code'];
         $target = match ($role) {
             'worker'             => '/worker',
@@ -23,6 +27,15 @@ final class PageController extends Controller
             default              => '/hq',
         };
         Response::redirect(base_url($target));
+    }
+
+    public function landing(Request $req): void
+    {
+        if (Auth::check()) {
+            // Signed-in users skip marketing.
+            Response::redirect(base_url('/'));
+        }
+        $this->view('landing', ['title' => 'FAOS BOS · AI Central Kitchen + QR Kiosk Sales'], 'blank');
     }
 
     public function workerDashboard(Request $req): void
