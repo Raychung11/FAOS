@@ -120,6 +120,7 @@ if ($svc || can('financial.manage')):
       </div>
       <div class="actgrp">
         <span class="actlbl">Report</span>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/solutions.php?client_id='.$id)) ?>">Solutions</a>
         <a class="btn-os gold sm" href="<?= e(url('advisor/action-plan.php?client_id='.$id)) ?>">Strategic report</a>
       </div>
     <?php endif; ?>
