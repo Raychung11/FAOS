@@ -28,9 +28,10 @@ $key = 'tax:' . $clientId;
 if (is_post()) {
     csrf_check();
     $in = [
-        'annual_income' => max(0.0, (float) input('annual_income', 0)),
-        'other_income'  => max(0.0, (float) input('other_income', 0)),
-        'children_u18'  => max(0, (int) input('children_u18', 0)),
+        'annual_income'     => max(0.0, (float) input('annual_income', 0)),
+        'other_income'      => max(0.0, (float) input('other_income', 0)),
+        'children_u18'      => max(0, (int) input('children_u18', 0)),
+        'children_tertiary' => max(0, (int) input('children_tertiary', 0)),
     ];
     foreach ($cat as $k => [$label, $cap]) {
         $in['r_' . $k] = min((float) $cap, max(0.0, (float) input('r_' . $k, 0)));
@@ -47,9 +48,10 @@ $fp->execute([$clientId, $tid]);
 $fin = $fp->fetch() ?: null;
 
 $default = [
-    'annual_income' => $fin ? round((float) $fin['monthly_income'] * 12, 2) : 0.0,
-    'other_income'  => 0.0,
-    'children_u18'  => 0,
+    'annual_income'     => $fin ? round((float) $fin['monthly_income'] * 12, 2) : 0.0,
+    'other_income'      => 0.0,
+    'children_u18'      => 0,
+    'children_tertiary' => 0,
 ];
 foreach ($cat as $k => $v) { $default['r_' . $k] = 0.0; }
 $in = setting_get_json($key, $default);
@@ -59,14 +61,15 @@ if (!isset($in['annual_income']) || (float) $in['annual_income'] <= 0) {
 
 $gross = (float) $in['annual_income'] + (float) $in['other_income'];
 
-$childRelief = (int) $in['children_u18'] * MY_CHILD_RELIEF;
+$childRelief = (int) $in['children_u18'] * MY_CHILD_RELIEF
+             + (int) ($in['children_tertiary'] ?? 0) * MY_CHILD_TERTIARY_RELIEF;
 $reliefTotal = MY_SELF_RELIEF + $childRelief;
 $reliefRows  = [];
-foreach ($cat as $k => [$label, $cap]) {
+foreach ($cat as $k => [$label, $cap, $group]) {
     $used = (float) ($in['r_' . $k] ?? 0);
     $reliefTotal += $used;
-    $reliefRows[$k] = ['label' => $label, 'cap' => (float) $cap, 'used' => $used,
-                       'headroom' => max(0.0, (float) $cap - $used)];
+    $reliefRows[$k] = ['label' => $label, 'cap' => (float) $cap, 'group' => $group,
+                       'used' => $used, 'headroom' => max(0.0, (float) $cap - $used)];
 }
 $reliefTotal = min($reliefTotal, $gross); // can't exceed income
 
@@ -77,18 +80,30 @@ $taxPayable = max(0.0, $grossTax - $rebate);
 $marginal   = my_marginal_rate($chargeable);
 $effRate    = $gross > 0 ? $taxPayable / $gross : 0.0;
 
-// Planning: unused relief -> potential saving at marginal rate.
-$tips = [];
+// Relief-by-relief advice: room left, est. saving at marginal rate, action.
+$advice = [];
 foreach ($reliefRows as $r) {
-    if ($r['headroom'] <= 0 || $marginal <= 0) { continue; }
-    $room   = min($r['headroom'], $chargeable);
-    $saving = $room * $marginal;
-    if ($saving >= 1) {
-        $tips[] = ['label' => $r['label'], 'room' => $room, 'saving' => $saving];
+    $room   = $r['headroom'];
+    $saving = ($room > 0 && $marginal > 0) ? min($room, $chargeable) * $marginal : 0.0;
+    if ($room <= 0) {
+        $status = 'Maximised'; $action = 'Fully claimed — no further room.';
+    } elseif ($marginal <= 0) {
+        $status = 'No tax benefit';
+        $action = 'Room of RM ' . money($room) . ', but no tax is payable at this income.';
+    } else {
+        $status = 'Top up';
+        $action = 'Top up RM ' . money($room) . ' to save ≈ RM ' . money($saving) . '.';
     }
+    $advice[] = ['label' => $r['label'], 'group' => $r['group'], 'used' => $r['used'],
+                 'cap' => $r['cap'], 'room' => $room, 'saving' => $saving,
+                 'status' => $status, 'action' => $action];
 }
-usort($tips, fn($a, $b) => $b['saving'] <=> $a['saving']);
-$maxSaving = array_sum(array_column($tips, 'saving'));
+usort($advice, fn ($a, $b) => $b['saving'] <=> $a['saving']);
+$maxSaving = array_sum(array_column($advice, 'saving'));
+$topLever  = $advice && $advice[0]['saving'] > 0 ? $advice[0]['label'] : '';
+
+$grouped = [];
+foreach ($cat as $k => [$label, $cap, $group]) { $grouped[$group][$k] = [$label, $cap]; }
 
 $pageTitle = 'Tax Planning — ' . $client['full_name'];
 require __DIR__ . '/../includes/header.php';
@@ -96,7 +111,7 @@ require __DIR__ . '/../includes/header.php';
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
   <div>
     <h2 style="margin:0;color:var(--navy)">Income Tax Planning</h2>
-    <span class="muted"><?= e($client['full_name']) ?> · Malaysia resident individual · YA2023+ schedule</span>
+    <span class="muted"><?= e($client['full_name']) ?> · follows LHDN individual reliefs (YA2024)</span>
   </div>
   <a class="btn-os ghost sm" href="<?= e(url('advisor/client-view.php?id='.$clientId)) ?>">Back to client</a>
 </div>
@@ -122,7 +137,7 @@ require __DIR__ . '/../includes/header.php';
 
 <div class="grid cols-2">
   <div class="card-os">
-    <div class="card-os-head">Income &amp; Reliefs</div>
+    <div class="card-os-head">Update the client's tax information</div>
     <div class="card-os-body">
       <form method="post">
         <?= csrf_field() ?>
@@ -133,42 +148,54 @@ require __DIR__ . '/../includes/header.php';
             <input type="number" step="0.01" name="other_income" value="<?= e($in['other_income'] ?? 0) ?>"></div>
           <div class="form-row"><label>Children under 18 (× RM2,000)</label>
             <input type="number" step="1" name="children_u18" value="<?= e($in['children_u18'] ?? 0) ?>"></div>
-          <?php foreach ($cat as $k => [$label, $cap]): ?>
-            <div class="form-row">
-              <label><?= e($label) ?> <span class="muted">(cap RM<?= e($cap) ?>)</span></label>
-              <input type="number" step="0.01" name="r_<?= e($k) ?>"
-                     value="<?= e($in['r_' . $k] ?? 0) ?>"></div>
-          <?php endforeach; ?>
+          <div class="form-row"><label>Children 18+ in tertiary study (× RM8,000)</label>
+            <input type="number" step="1" name="children_tertiary" value="<?= e($in['children_tertiary'] ?? 0) ?>"></div>
         </div>
-        <p class="muted" style="font-size:12px;margin:4px 0 10px">
-          Self &amp; dependent-relatives relief of RM<?= number_format(MY_SELF_RELIEF) ?>
+        <p class="muted" style="font-size:12px;margin:4px 0 10px">Enter how much
+          the client has <em>already claimed/spent</em> against each LHDN relief —
+          the system shows the room left and what to do. Self &amp;
+          dependent-relatives relief of RM<?= number_format(MY_SELF_RELIEF) ?>
           is applied automatically.</p>
-        <button class="btn-os">Recalculate</button>
+        <?php foreach ($grouped as $group => $items): ?>
+          <div class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;
+               letter-spacing:.05em;margin:10px 0 6px;color:var(--navy)"><?= e($group) ?></div>
+          <div class="form-grid">
+            <?php foreach ($items as $k => [$label, $cap]): ?>
+              <div class="form-row">
+                <label><?= e($label) ?> <span class="muted">(cap RM<?= e($cap) ?>)</span></label>
+                <input type="number" step="0.01" name="r_<?= e($k) ?>"
+                       value="<?= e($in['r_' . $k] ?? 0) ?>"></div>
+            <?php endforeach; ?>
+          </div>
+        <?php endforeach; ?>
+        <button class="btn-os" style="margin-top:12px">Save &amp; advise</button>
       </form>
     </div>
   </div>
 
   <div class="card-os">
-    <div class="card-os-head">Planning Opportunities</div>
+    <div class="card-os-head">What to do — relief-by-relief advice</div>
     <div class="card-os-body" style="padding:0">
-      <?php if ($tips): ?>
-        <table class="table-os">
-          <thead><tr><th>Unused relief</th><th>Top-up room</th><th>Est. tax saving</th></tr></thead>
-          <tbody>
-          <?php foreach ($tips as $t): ?>
-            <tr><td><?= e($t['label']) ?></td>
-                <td>RM <?= money($t['room']) ?></td>
-                <td style="color:var(--ok)">RM <?= money($t['saving']) ?></td></tr>
-          <?php endforeach; ?>
-          <tr><td><strong>Total potential</strong></td><td></td>
-              <td><strong style="color:var(--ok)">RM <?= money($maxSaving) ?></strong></td></tr>
-          </tbody>
-        </table>
-      <?php else: ?>
-        <div style="padding:18px" class="muted">
-          No further relief headroom at the current marginal rate
-          (<?= (int) round($marginal * 100) ?>%), or chargeable income is nil.</div>
-      <?php endif; ?>
+      <table class="table-os">
+        <thead><tr><th>LHDN relief</th><th>Claimed / cap</th><th>Advice</th></tr></thead>
+        <tbody>
+        <?php foreach ($advice as $a): ?>
+          <tr>
+            <td><strong><?= e($a['label']) ?></strong>
+              <div class="muted" style="font-size:11px"><?= e($a['group']) ?></div></td>
+            <td>RM <?= money($a['used']) ?> / <?= money($a['cap']) ?>
+              <?php $cls = $a['status']==='Maximised'?'b-active':($a['status']==='Top up'?'b-warn':'b-scheduled'); ?>
+              <div><span class="badge-os <?= $cls ?>" style="font-size:10px"><?= e($a['status']) ?></span></div></td>
+            <td style="font-size:13px"><?= e($a['action']) ?>
+              <?php if ($a['saving'] > 0): ?>
+                <span style="color:var(--ok);font-weight:600">+RM <?= money($a['saving']) ?></span>
+              <?php endif; ?></td>
+          </tr>
+        <?php endforeach; ?>
+        <tr><td colspan="2"><strong>Total potential annual saving</strong></td>
+            <td><strong style="color:var(--ok)">RM <?= money($maxSaving) ?></strong></td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 </div>
@@ -179,8 +206,7 @@ require __DIR__ . '/../includes/header.php';
     <ul style="margin:0 0 6px 18px">
       <?php if ($maxSaving >= 1): ?>
         <li>Up to <strong>RM <?= money($maxSaving) ?></strong> of estimated tax
-            could be deferred/saved by fully utilising eligible reliefs — the
-            largest lever is <strong><?= e($tips[0]['label']) ?></strong>.</li>
+            could be deferred/saved by fully utilising eligible reliefs<?= $topLever ? ' — the largest lever is <strong>'.e($topLever).'</strong>' : '' ?>.</li>
         <li>PRS &amp; SSPN top-ups also advance the client's retirement and
             education goals — align with the financial plan, not tax alone.</li>
       <?php elseif ($chargeable <= 0): ?>

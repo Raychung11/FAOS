@@ -80,7 +80,8 @@ function tax_summary(PDO $pdo, ?int $tid, int $clientId): ?array
         return null;
     }
 
-    $relief = MY_SELF_RELIEF + (int) ($in['children_u18'] ?? 0) * MY_CHILD_RELIEF;
+    $relief = MY_SELF_RELIEF + (int) ($in['children_u18'] ?? 0) * MY_CHILD_RELIEF
+            + (int) ($in['children_tertiary'] ?? 0) * MY_CHILD_TERTIARY_RELIEF;
     foreach ($cat as $k => $v) { $relief += (float) ($in['r_' . $k] ?? 0); }
     $relief = min($relief, $gross);
 

@@ -63,19 +63,31 @@ function my_rebate(float $chargeable): float
 /** Editable relief catalogue: key => [label, statutory cap]. */
 function my_relief_catalogue(): array
 {
+    // [label, cap, group] — Malaysian resident-individual reliefs (YA2024).
     return [
-        'epf'       => ['EPF / approved provident fund', 4000],
-        'life'      => ['Life insurance & takaful', 3000],
-        'prs'       => ['Private Retirement Scheme (PRS)', 3000],
-        'lifestyle' => ['Lifestyle (books, devices, internet, sports)', 2500],
-        'medins'    => ['Education & medical insurance', 3000],
-        'sspn'      => ['SSPN education savings (net deposit)', 8000],
-        'medical'   => ['Serious medical / parents medical', 10000],
-        'spouse'    => ['Spouse relief (spouse no income)', 4000],
+        'epf'             => ['EPF / approved provident fund', 4000, 'Retirement & insurance'],
+        'life'            => ['Life insurance & takaful', 3000, 'Retirement & insurance'],
+        'prs'             => ['Deferred annuity & PRS', 3000, 'Retirement & insurance'],
+        'medins'          => ['Education & medical insurance', 3000, 'Retirement & insurance'],
+        'socso'           => ['SOCSO / EIS contribution', 350, 'Retirement & insurance'],
+        'medical'         => ['Serious illness, fertility, vaccination & check-up', 10000, 'Medical'],
+        'parents_medical' => ['Parents — medical, special needs & carer', 8000, 'Medical'],
+        'disabled_equip'  => ['Basic supporting equipment (disabled)', 6000, 'Medical'],
+        'disabled_self'   => ['Disabled individual (self)', 6000, 'Medical'],
+        'lifestyle'       => ['Lifestyle — books, devices, internet, courses', 2500, 'Lifestyle & education'],
+        'lifestyle_sport' => ['Sports equipment, facilities & training', 1000, 'Lifestyle & education'],
+        'education_self'  => ['Education fees (self, incl. upskilling)', 7000, 'Lifestyle & education'],
+        'ev_charging'     => ['EV charging facilities', 2500, 'Lifestyle & education'],
+        'spouse'          => ['Spouse / alimony (spouse no income)', 4000, 'Family'],
+        'childcare'       => ['Childcare / kindergarten fees (child ≤6)', 3000, 'Family'],
+        'breastfeed'      => ['Breastfeeding equipment (child ≤2)', 1000, 'Family'],
+        'sspn'            => ['SSPN net deposit (education savings)', 8000, 'Family'],
     ];
 }
 
 /** Automatic self & dependent-relatives relief. */
 const MY_SELF_RELIEF = 9000.0;
-/** Child relief per child under 18. */
+/** Child relief — per child under 18. */
 const MY_CHILD_RELIEF = 2000.0;
+/** Child relief — per unmarried child 18+ in full-time tertiary study. */
+const MY_CHILD_TERTIARY_RELIEF = 8000.0;
