@@ -54,14 +54,48 @@ try {
     }
     $creator = $adminId ?: $advisorId;
 
+    // Idempotent reference seeds (safe to re-run): platform tax rates
+    // and the demo client's Tax Planning engagement. Defined here so it
+    // can run whether or not the demo client already exists.
+    require_once __DIR__ . '/../includes/tax_my.php';
+    $seedTaxAndSolutions = static function (int $cid) use ($pdo, $tenantId, $out): void {
+        $up = $pdo->prepare(
+            'INSERT INTO settings (tenant_id, setting_key, setting_value) VALUES (?,?,?)
+             ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
+        );
+        $taxCfg = tax_defaults();
+        $y2025 = $taxCfg['years']['2024'];
+        $y2025['reliefs']['lifestyle']['cap']   = 3000;   // illustrative bump
+        $y2025['reliefs']['ev_charging']['cap'] = 4000;
+        $y2025['reliefs']['prs']['cap']         = 4000;
+        $taxCfg['years']['2025'] = $y2025;
+        $taxCfg['current_ya'] = 2024;
+        $up->execute([0, 'tax_rates', json_encode($taxCfg)]);
+        $out(' Seeded tax rates: YA2024 (active) + YA2025 (sample).');
+
+        $up->execute([$tenantId, 'solutions:' . $cid, json_encode(['tax' => [
+            'status'     => 'in_progress',
+            'scope'      => "1. Maximise unused LHDN reliefs (PRS, SSPN, medical, lifestyle).\n"
+                          . "2. Restructure director remuneration into a tax-efficient salary/dividend mix.\n"
+                          . "3. Time dividends and review insurance/EPF contributions before year end.",
+            'est_saving' => 28000.0,
+            'fee'        => 4800.0,
+            'notes'      => 'Demo engagement.',
+            'updated_at' => date('Y-m-d H:i'),
+            'owner'      => 'Demo Advisor',
+        ]])]);
+        $out(' Seeded Tax Planning engagement for the demo client.');
+    };
+
     // --- Idempotency guard ---------------------------------------
     $exists = $pdo->prepare(
         "SELECT id FROM clients WHERE tenant_id=? AND nric_passport='DEMO-CLIENT-001'"
     );
     $exists->execute([$tenantId]);
     if ($cid = (int) $exists->fetchColumn()) {
-        $out('Demo data already present (client #' . $cid . '). Nothing to do.');
-        $out('Delete that client in phpMyAdmin to reseed, then run this again.');
+        $out('Demo client #' . $cid . ' already present — refreshing reference data only.');
+        $seedTaxAndSolutions($cid);
+        $out('Done. (Delete the client in phpMyAdmin if you want a full reseed.)');
         if (!$isCli) { echo '</pre>'; }
         exit;
     }
@@ -184,33 +218,8 @@ try {
         'proposal'=>25,'capability'=>8,'tax'=>6,'total'=>39,
     ])]);
 
-    // --- Platform tax rates (reference data, reserved tenant 0) --
-    // Seeds YA2024 (current law) plus an illustrative YA2025 so the
-    // year-versioned editor and switching can be tested.
-    require_once __DIR__ . '/../includes/tax_my.php';
-    $taxCfg = tax_defaults();
-    $y2025 = $taxCfg['years']['2024'];
-    $y2025['reliefs']['lifestyle']['cap']   = 3000;   // illustrative bump
-    $y2025['reliefs']['ev_charging']['cap'] = 4000;
-    $y2025['reliefs']['prs']['cap']         = 4000;
-    $taxCfg['years']['2025'] = $y2025;
-    $taxCfg['current_ya'] = 2024;                      // keep 2024 active
-    $up->execute([0, 'tax_rates', json_encode($taxCfg)]);
-    $out(' Seeded tax rates: YA2024 (active) + YA2025 (sample).');
-
-    // --- Tax Planning solution engagement (so it shows in the portal) ---
-    $up->execute([$tenantId, 'solutions:' . $clientId, json_encode(['tax' => [
-        'status'     => 'in_progress',
-        'scope'      => "1. Maximise unused LHDN reliefs (PRS, SSPN, medical, lifestyle).\n"
-                      . "2. Restructure director remuneration into a tax-efficient salary/dividend mix.\n"
-                      . "3. Time dividends and review insurance/EPF contributions before year end.",
-        'est_saving' => 28000.0,
-        'fee'        => 4800.0,
-        'notes'      => 'Demo engagement.',
-        'updated_at' => date('Y-m-d H:i'),
-        'owner'      => 'Demo Advisor',
-    ]])]);
-    $out(' Seeded Tax Planning engagement for the demo client.');
+    // --- Platform tax rates + Tax Planning engagement -----------
+    $seedTaxAndSolutions($clientId);
 
     // --- Entrepreneur business profile (companies layer) ---------
     $hasCo = $pdo->prepare('SELECT id FROM companies WHERE client_id=? AND name=? LIMIT 1');
