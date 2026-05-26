@@ -105,6 +105,59 @@ function salary_dividend_scenarios(float $P, float $E, float $other, float $reli
             'p' => $P, 'extraction' => $E, 'sme' => $isSme];
 }
 
+/**
+ * Personal + corporate tax before vs after our analysis.
+ * "Before" = reliefs as entered + all-salary extraction; "after" =
+ * eligible reliefs fully utilised + the efficient salary/dividend split.
+ * @return array
+ */
+function tax_impact(PDO $pdo, ?int $tid, int $clientId): array
+{
+    $fp = $pdo->prepare('SELECT * FROM financial_profiles WHERE client_id=? AND tenant_id=? ORDER BY snapshot_date DESC, id DESC LIMIT 1');
+    $fp->execute([$clientId, $tid]);
+    $fin = $fp->fetch() ?: null;
+
+    $cat = my_relief_catalogue();
+    $in  = setting_get_json('tax:' . $clientId, []);
+    $income = (float) ($in['annual_income'] ?? 0);
+    if ($income <= 0 && $fin) { $income = (float) $fin['monthly_income'] * 12; }
+    $gross = $income + (float) ($in['other_income'] ?? 0);
+
+    $childRelief = (int) ($in['children_u18'] ?? 0) * my_child_relief()
+                 + (int) ($in['children_tertiary'] ?? 0) * my_child_tertiary_relief();
+    $used = 0.0; $max = 0.0; $topUps = [];
+    foreach ($cat as $k => [$label, $cap, $grp]) {
+        $u = min((float) $cap, max(0.0, (float) ($in['r_' . $k] ?? 0)));
+        $used += $u; $max += (float) $cap;
+        if ($cap - $u > 0) { $topUps[] = ['label' => $label, 'room' => $cap - $u]; }
+    }
+    usort($topUps, fn ($a, $b) => $b['room'] <=> $a['room']);
+
+    $rb = min($gross, my_self_relief() + $childRelief + $used);
+    $ra = min($gross, my_self_relief() + $childRelief + $max);
+    $pb = max(0.0, my_tax_on(max(0.0, $gross - $rb)) - my_rebate(max(0.0, $gross - $rb)));
+    $pa = max(0.0, my_tax_on(max(0.0, $gross - $ra)) - my_rebate(max(0.0, $gross - $ra)));
+
+    $cb = 0.0; $ca = 0.0; $corpRows = [];
+    foreach (companies_for_client($clientId) as $c) {
+        $bf = bf_latest((int) $c['id']);
+        $ti = corptax_inputs((int) $c['id'], $bf);
+        if ($ti['pre_profit'] <= 0) { continue; }
+        $sc = salary_dividend_scenarios($ti['pre_profit'], $ti['extraction'],
+            $ti['other_income'], $ti['reliefs'], $ti['is_sme']);
+        $cb += $sc['all_salary']['total']; $ca += $sc['optimal']['total'];
+        $corpRows[] = ['name' => $c['name'], 'before' => $sc['all_salary']['total'],
+                       'after' => $sc['optimal']['total']];
+    }
+
+    $bt = $pb + $cb; $at = $pa + $ca; $sv = max(0.0, $bt - $at);
+    return ['gross' => $gross, 'pers_before' => $pb, 'pers_after' => $pa,
+            'pers_saving' => max(0.0, $pb - $pa), 'corp_before' => $cb, 'corp_after' => $ca,
+            'corp_saving' => max(0.0, $cb - $ca), 'corp_rows' => $corpRows,
+            'before_total' => $bt, 'after_total' => $at, 'saving' => $sv,
+            'pct' => $bt > 0 ? $sv / $bt * 100 : 0.0, 'topups' => $topUps];
+}
+
 /** One-line AI-context summary across the client's companies. */
 function corptax_client_summary(PDO $pdo, ?int $tid, int $clientId): ?array
 {

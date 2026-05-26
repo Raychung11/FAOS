@@ -198,6 +198,20 @@ try {
     $up->execute([0, 'tax_rates', json_encode($taxCfg)]);
     $out(' Seeded tax rates: YA2024 (active) + YA2025 (sample).');
 
+    // --- Tax Planning solution engagement (so it shows in the portal) ---
+    $up->execute([$tenantId, 'solutions:' . $clientId, json_encode(['tax' => [
+        'status'     => 'in_progress',
+        'scope'      => "1. Maximise unused LHDN reliefs (PRS, SSPN, medical, lifestyle).\n"
+                      . "2. Restructure director remuneration into a tax-efficient salary/dividend mix.\n"
+                      . "3. Time dividends and review insurance/EPF contributions before year end.",
+        'est_saving' => 28000.0,
+        'fee'        => 4800.0,
+        'notes'      => 'Demo engagement.',
+        'updated_at' => date('Y-m-d H:i'),
+        'owner'      => 'Demo Advisor',
+    ]])]);
+    $out(' Seeded Tax Planning engagement for the demo client.');
+
     // --- Entrepreneur business profile (companies layer) ---------
     $hasCo = $pdo->prepare('SELECT id FROM companies WHERE client_id=? AND name=? LIMIT 1');
     $hasCo->execute([$clientId, 'Lim Trading Sdn Bhd']);

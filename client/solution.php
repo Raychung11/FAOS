@@ -4,8 +4,11 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/_client.php';
 require_once __DIR__ . '/../includes/solutions.php';
+require_once __DIR__ . '/../includes/corptax.php';
 
 $c   = portal_client();
+$pdo = db();
+$tid = (int) $c['tenant_id'];
 $key = preg_replace('/[^a-z0-9_]/i', '', (string) ($_GET['key'] ?? ''));
 $cat = solution_catalog();
 
@@ -31,6 +34,32 @@ require __DIR__ . '/../includes/header.php';
 <?php if ($eng['status'] === 'none'): ?>
   <div class="alert-os info">Your adviser hasn't prepared this solution yet.</div>
 <?php else: ?>
+
+<?php if ($key === 'tax'): $imp = tax_impact($pdo, $tid, (int) $c['id']);
+      $afterW = $imp['before_total'] > 0 ? max(2, $imp['after_total'] / $imp['before_total'] * 100) : 0; ?>
+  <div class="card-os" style="margin-bottom:18px">
+    <div class="card-os-head">Your tax — before vs after our plan</div>
+    <div class="card-os-body">
+      <div class="grid cols-3" style="margin-bottom:16px">
+        <div class="stat"><div class="stat-label">Tax now</div>
+          <div class="stat-value">RM <?= money($imp['before_total']) ?></div>
+          <div class="stat-foot">per year</div></div>
+        <div class="stat"><div class="stat-label">Tax after our plan</div>
+          <div class="stat-value">RM <?= money($imp['after_total']) ?></div>
+          <div class="stat-foot">reliefs maximised + efficient extraction</div></div>
+        <div class="stat accent"><div class="stat-label">You could save</div>
+          <div class="stat-value" style="color:var(--ok)">RM <?= money($imp['saving']) ?></div>
+          <div class="stat-foot"><?= round($imp['pct'], 1) ?>% lower, every year</div></div>
+      </div>
+      <div class="muted" style="font-size:12px;margin-bottom:4px">Before — RM <?= money($imp['before_total']) ?></div>
+      <div style="height:26px;border-radius:8px;background:var(--danger);color:#fff;
+           display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px;margin-bottom:10px">RM <?= money($imp['before_total']) ?></div>
+      <div class="muted" style="font-size:12px;margin-bottom:4px">After — RM <?= money($imp['after_total']) ?></div>
+      <div style="height:26px;width:<?= $afterW ?>%;border-radius:8px;background:var(--ok);color:#fff;
+           display:flex;align-items:center;padding:0 12px;font-weight:700;font-size:13px">RM <?= money($imp['after_total']) ?></div>
+    </div>
+  </div>
+<?php endif; ?>
 
 <?php if ($eng['est_saving'] > 0): ?>
 <div class="grid cols-2" style="margin-bottom:18px">

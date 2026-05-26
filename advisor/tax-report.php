@@ -22,49 +22,14 @@ $fp = $pdo->prepare('SELECT * FROM financial_profiles WHERE client_id=? AND tena
 $fp->execute([$clientId, $tid]);
 $fin = $fp->fetch() ?: null;
 
-// --- Personal income tax: before (as entered) vs after (reliefs maxed) ---
-$cat = my_relief_catalogue();
-$in  = setting_get_json('tax:' . $clientId, []);
-$income = (float) ($in['annual_income'] ?? 0);
-if ($income <= 0 && $fin) { $income = (float) $fin['monthly_income'] * 12; }
-$gross = $income + (float) ($in['other_income'] ?? 0);
-
-$childRelief = (int) ($in['children_u18'] ?? 0) * my_child_relief()
-             + (int) ($in['children_tertiary'] ?? 0) * my_child_tertiary_relief();
-$usedReliefs = 0.0; $maxReliefs = 0.0; $topUps = [];
-foreach ($cat as $k => [$label, $cap, $group]) {
-    $u = min((float) $cap, max(0.0, (float) ($in['r_' . $k] ?? 0)));
-    $usedReliefs += $u;
-    $maxReliefs  += (float) $cap;
-    if ($cap - $u > 0) { $topUps[] = ['label' => $label, 'room' => $cap - $u]; }
-}
-usort($topUps, fn ($a, $b) => $b['room'] <=> $a['room']);
-
-$reliefBefore = min($gross, my_self_relief() + $childRelief + $usedReliefs);
-$reliefAfter  = min($gross, my_self_relief() + $childRelief + $maxReliefs);
-$persBefore = max(0.0, my_tax_on(max(0.0, $gross - $reliefBefore)) - my_rebate(max(0.0, $gross - $reliefBefore)));
-$persAfter  = max(0.0, my_tax_on(max(0.0, $gross - $reliefAfter))  - my_rebate(max(0.0, $gross - $reliefAfter)));
-$persSaving = max(0.0, $persBefore - $persAfter);
-
-// --- Corporate: before (all salary) vs after (optimal split) ---
-$corpBefore = 0.0; $corpAfter = 0.0; $corpRows = [];
-foreach (companies_for_client($clientId) as $c) {
-    $bf = bf_latest((int) $c['id']);
-    $ti = corptax_inputs((int) $c['id'], $bf);
-    if ($ti['pre_profit'] <= 0) { continue; }
-    $sc = salary_dividend_scenarios($ti['pre_profit'], $ti['extraction'],
-        $ti['other_income'], $ti['reliefs'], $ti['is_sme']);
-    $corpBefore += $sc['all_salary']['total'];
-    $corpAfter  += $sc['optimal']['total'];
-    $corpRows[] = ['name' => $c['name'], 'before' => $sc['all_salary']['total'],
-                   'after' => $sc['optimal']['total']];
-}
-$corpSaving = max(0.0, $corpBefore - $corpAfter);
-
-$beforeTotal = $persBefore + $corpBefore;
-$afterTotal  = $persAfter + $corpAfter;
-$saving      = max(0.0, $beforeTotal - $afterTotal);
-$pct         = $beforeTotal > 0 ? $saving / $beforeTotal * 100 : 0.0;
+// Before vs after (shared engine — see includes/corptax.php).
+$imp = tax_impact($pdo, $tid, $clientId);
+$gross       = $imp['gross'];
+$persBefore  = $imp['pers_before']; $persAfter = $imp['pers_after']; $persSaving = $imp['pers_saving'];
+$corpRows    = $imp['corp_rows'];
+$beforeTotal = $imp['before_total']; $afterTotal = $imp['after_total'];
+$saving      = $imp['saving']; $pct = $imp['pct'];
+$topUps      = $imp['topups'];
 $afterW      = $beforeTotal > 0 ? max(2, $afterTotal / $beforeTotal * 100) : 0;
 
 $eng = solution_get($clientId, 'tax');
