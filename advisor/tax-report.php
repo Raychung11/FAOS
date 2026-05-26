@@ -29,8 +29,8 @@ $income = (float) ($in['annual_income'] ?? 0);
 if ($income <= 0 && $fin) { $income = (float) $fin['monthly_income'] * 12; }
 $gross = $income + (float) ($in['other_income'] ?? 0);
 
-$childRelief = (int) ($in['children_u18'] ?? 0) * MY_CHILD_RELIEF
-             + (int) ($in['children_tertiary'] ?? 0) * MY_CHILD_TERTIARY_RELIEF;
+$childRelief = (int) ($in['children_u18'] ?? 0) * my_child_relief()
+             + (int) ($in['children_tertiary'] ?? 0) * my_child_tertiary_relief();
 $usedReliefs = 0.0; $maxReliefs = 0.0; $topUps = [];
 foreach ($cat as $k => [$label, $cap, $group]) {
     $u = min((float) $cap, max(0.0, (float) ($in['r_' . $k] ?? 0)));
@@ -40,8 +40,8 @@ foreach ($cat as $k => [$label, $cap, $group]) {
 }
 usort($topUps, fn ($a, $b) => $b['room'] <=> $a['room']);
 
-$reliefBefore = min($gross, MY_SELF_RELIEF + $childRelief + $usedReliefs);
-$reliefAfter  = min($gross, MY_SELF_RELIEF + $childRelief + $maxReliefs);
+$reliefBefore = min($gross, my_self_relief() + $childRelief + $usedReliefs);
+$reliefAfter  = min($gross, my_self_relief() + $childRelief + $maxReliefs);
 $persBefore = max(0.0, my_tax_on(max(0.0, $gross - $reliefBefore)) - my_rebate(max(0.0, $gross - $reliefBefore)));
 $persAfter  = max(0.0, my_tax_on(max(0.0, $gross - $reliefAfter))  - my_rebate(max(0.0, $gross - $reliefAfter)));
 $persSaving = max(0.0, $persBefore - $persAfter);

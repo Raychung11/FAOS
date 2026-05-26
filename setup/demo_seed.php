@@ -184,6 +184,20 @@ try {
         'proposal'=>25,'capability'=>8,'tax'=>6,'total'=>39,
     ])]);
 
+    // --- Platform tax rates (reference data, reserved tenant 0) --
+    // Seeds YA2024 (current law) plus an illustrative YA2025 so the
+    // year-versioned editor and switching can be tested.
+    require_once __DIR__ . '/../includes/tax_my.php';
+    $taxCfg = tax_defaults();
+    $y2025 = $taxCfg['years']['2024'];
+    $y2025['reliefs']['lifestyle']['cap']   = 3000;   // illustrative bump
+    $y2025['reliefs']['ev_charging']['cap'] = 4000;
+    $y2025['reliefs']['prs']['cap']         = 4000;
+    $taxCfg['years']['2025'] = $y2025;
+    $taxCfg['current_ya'] = 2024;                      // keep 2024 active
+    $up->execute([0, 'tax_rates', json_encode($taxCfg)]);
+    $out(' Seeded tax rates: YA2024 (active) + YA2025 (sample).');
+
     // --- Entrepreneur business profile (companies layer) ---------
     $hasCo = $pdo->prepare('SELECT id FROM companies WHERE client_id=? AND name=? LIMIT 1');
     $hasCo->execute([$clientId, 'Lim Trading Sdn Bhd']);

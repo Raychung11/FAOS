@@ -22,12 +22,14 @@ function corp_tax(float $chargeable, bool $isSme): float
     if ($chargeable <= 0) {
         return 0.0;
     }
+    $y = tax_year();
     if (!$isSme) {
-        return $chargeable * 0.24;
+        return $chargeable * (float) ($y['corp_flat'] ?? 0.24);
     }
-    $bands = [[0, 150000, 0.15], [150000, 600000, 0.17], [600000, PHP_FLOAT_MAX, 0.24]];
+    $bands = $y['corp_sme_bands'] ?? [[0, 150000, 0.15], [150000, 600000, 0.17], [600000, null, 0.24]];
     $t = 0.0;
     foreach ($bands as [$lo, $hi, $r]) {
+        $hi = $hi ?? PHP_FLOAT_MAX;
         if ($chargeable <= $lo) { break; }
         $t += (min($chargeable, $hi) - $lo) * $r;
     }

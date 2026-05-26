@@ -22,6 +22,7 @@ if ($role === 'super_admin') {
         ['Tenants',        'superadmin/tenants.php',       '▤', 'platform.manage'],
         ['Subscriptions',  'superadmin/subscriptions.php', '◷', 'platform.manage'],
         ['Revenue',        'superadmin/revenue.php',       '$', 'platform.manage'],
+        ['Tax Rates',      'superadmin/tax-rates.php',     '%', 'platform.manage'],
         ['Access Requests','superadmin/signups.php',       '✉', 'platform.manage'],
         ['Audit Trail',    'superadmin/audit.php',         '◈', 'audit.view'],
     ];

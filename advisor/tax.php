@@ -61,9 +61,9 @@ if (!isset($in['annual_income']) || (float) $in['annual_income'] <= 0) {
 
 $gross = (float) $in['annual_income'] + (float) $in['other_income'];
 
-$childRelief = (int) $in['children_u18'] * MY_CHILD_RELIEF
-             + (int) ($in['children_tertiary'] ?? 0) * MY_CHILD_TERTIARY_RELIEF;
-$reliefTotal = MY_SELF_RELIEF + $childRelief;
+$childRelief = (int) $in['children_u18'] * my_child_relief()
+             + (int) ($in['children_tertiary'] ?? 0) * my_child_tertiary_relief();
+$reliefTotal = my_self_relief() + $childRelief;
 $reliefRows  = [];
 foreach ($cat as $k => [$label, $cap, $group]) {
     $used = (float) ($in['r_' . $k] ?? 0);
@@ -157,7 +157,7 @@ require __DIR__ . '/../includes/header.php';
         <p class="muted" style="font-size:12px;margin:4px 0 10px">Enter how much
           the client has <em>already claimed/spent</em> against each LHDN relief —
           the system shows the room left and what to do. Self &amp;
-          dependent-relatives relief of RM<?= number_format(MY_SELF_RELIEF) ?>
+          dependent-relatives relief of RM<?= number_format(my_self_relief()) ?>
           is applied automatically.</p>
         <?php foreach ($grouped as $group => $items): ?>
           <div class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;

@@ -72,3 +72,19 @@ function setting_put_json_for(int $tid, string $key, array $value): void
          ON DUPLICATE KEY UPDATE setting_value = VALUES(setting_value)'
     )->execute([$tid, $key, json_encode($value, JSON_UNESCAPED_UNICODE)]);
 }
+
+/**
+ * Platform-wide (tenant-independent) settings — e.g. tax rates that are
+ * the same for every tenant. Stored under the reserved tenant id 0 so
+ * the UNIQUE(tenant_id, setting_key) upsert is reliable (NULL would not
+ * dedupe). No tenant has id 0.
+ */
+function platform_setting_get_json(string $key, array $default = []): array
+{
+    return setting_get_json_for(0, $key, $default);
+}
+
+function platform_setting_put_json(string $key, array $value): void
+{
+    setting_put_json_for(0, $key, $value);
+}
