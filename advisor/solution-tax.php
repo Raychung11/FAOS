@@ -62,6 +62,7 @@ require __DIR__ . '/../includes/header.php';
     <h2 style="margin:0;color:var(--navy)">Tax Planning <span class="badge-os <?= $scls ?>" style="font-size:13px"><?= e($slbl) ?></span></h2>
     <span class="muted"><?= e($client['full_name']) ?> · advanced solution engagement</span>
   </div>
+  <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-report.php?client_id='.$clientId)) ?>">Before/After report</a>
   <a class="btn-os ghost sm" href="<?= e(url('advisor/solutions.php?client_id='.$clientId)) ?>">All solutions</a>
 </div>
 
