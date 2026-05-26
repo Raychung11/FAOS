@@ -20,6 +20,16 @@ $ap = $pdo->prepare("SELECT * FROM appointments WHERE client_id=? AND tenant_id=
 $ap->execute([$c['id'],$tid]);
 $appts = $ap->fetchAll();
 
+require_once __DIR__ . '/../includes/solutions.php';
+$engAll   = solution_engagements((int) $c['id']);
+$prepared = [];
+foreach (solution_catalog() as $k => $s) {
+    $status = $engAll[$k]['status'] ?? 'none';
+    if ($s['active'] && $status !== 'none') {
+        $prepared[$k] = ['s' => $s, 'e' => solution_get((int) $c['id'], $k)];
+    }
+}
+
 $pageTitle = 'My Portal';
 require __DIR__ . '/../includes/header.php';
 ?>
@@ -94,6 +104,33 @@ require __DIR__ . '/../includes/header.php';
       <div class="disclaimer" style="margin-top:18px">This portal supports servicing
         and does not replace advice from your licensed financial advisor.</div>
     </div>
+  </div>
+</div>
+
+<div class="card-os" style="margin-top:18px">
+  <div class="card-os-head">Your advisory solutions</div>
+  <div class="card-os-body">
+    <?php if (!$prepared): ?>
+      <p class="muted" style="margin:0">Your adviser can prepare advanced
+        solutions for you — tax planning, business restructuring, risk and
+        succession. Ask them to get started.</p>
+    <?php else: ?>
+      <div class="grid cols-2">
+        <?php foreach ($prepared as $k => $row): $s = $row['s']; $eng = $row['e'];
+              [$slbl, $scls] = SOLUTION_STATUSES[$eng['status']]; ?>
+          <div style="border:1px solid var(--line);border-radius:12px;padding:16px">
+            <div style="font-weight:700;color:var(--navy)"><?= e($s['name']) ?>
+              <span class="badge-os <?= $scls ?>" style="font-size:10px"><?= e($slbl) ?></span></div>
+            <p class="muted" style="margin:4px 0 8px;font-size:13px"><?= e($s['tagline']) ?></p>
+            <?php if ($eng['est_saving'] > 0): ?>
+              <div style="font-size:13px;margin-bottom:8px">Estimated value:
+                <strong style="color:var(--ok)">RM <?= money($eng['est_saving']) ?>/yr</strong></div>
+            <?php endif; ?>
+            <a class="btn-os gold sm" href="<?= e(url('client/solution.php?key='.e($k))) ?>">View details</a>
+          </div>
+        <?php endforeach; ?>
+      </div>
+    <?php endif; ?>
   </div>
 </div>
 <?php require __DIR__ . '/../includes/footer.php'; ?>

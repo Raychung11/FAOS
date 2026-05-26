@@ -21,21 +21,41 @@ function solution_catalog(): array
             'name' => 'Tax Planning', 'active' => true, 'page' => 'advisor/solution-tax.php',
             'tagline' => 'Keep more in the owner\'s hands — legally.',
             'desc' => 'Personal reliefs, corporate rates and a tax-efficient salary/dividend mix, turned into an implementation plan.',
+            'benefits' => [
+                'See your tax now vs after — and the ringgit you could save each year',
+                'Use every LHDN relief you\'re entitled to',
+                'A tax-smart way to pay yourself from the company',
+            ],
         ],
         'restructuring' => [
             'name' => 'Business Restructuring', 'active' => false, 'page' => null,
             'tagline' => 'Hold the right assets in the right entity.',
             'desc' => 'Holding-company and group structures to defer tax, ring-fence assets and prepare for growth or exit.',
+            'benefits' => [
+                'Protect personal and family assets from business risk',
+                'Defer tax and prepare the group for growth or sale',
+                'A cleaner structure investors and bankers trust',
+            ],
         ],
         'risk' => [
             'name' => 'Risk Planning', 'active' => false, 'page' => null,
             'tagline' => 'Protect the owner, the family and the business.',
             'desc' => 'Keyman cover, buy-sell funding, guarantee protection and contingency planning.',
+            'benefits' => [
+                'Make sure the family is provided for, whatever happens',
+                'Keep the business running if a key person is lost',
+                'Cap your exposure on personal guarantees',
+            ],
         ],
         'equity' => [
             'name' => 'Shareholding & Equity Planning', 'active' => false, 'page' => null,
             'tagline' => 'Get the cap table and succession right.',
             'desc' => 'Shareholder agreements, share transfers, ESOS and a funded ownership-transition plan.',
+            'benefits' => [
+                'A clear, fair ownership and succession plan',
+                'Reward key people with equity the right way',
+                'A funded buy-sell so transitions go smoothly',
+            ],
         ],
     ];
 }

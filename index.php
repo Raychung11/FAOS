@@ -6,6 +6,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/billing.php';
+require_once __DIR__ . '/includes/solutions.php';
 
 if (is_logged_in() || attempt_remember_login()) {
     redirect(role_home(current_user()['role_code']));
@@ -222,6 +223,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
     <div class="lp-logo"><?= e(APP_NAME) ?><span>OS</span></div>
     <div class="lp-links">
       <a href="#features">Features</a>
+      <a href="#solutions">Solutions</a>
       <a href="#how">How it works</a>
       <a href="#pricing">Pricing</a>
       <a href="#faq">FAQ</a>
@@ -270,6 +272,27 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
           <h3><?= e($t) ?></h3><p><?= e($d) ?></p>
         </div></div>
       <?php endforeach; ?>
+    </div>
+  </section>
+
+  <section class="lp-sec reveal" id="solutions">
+    <h2>Advanced solutions we implement</h2>
+    <p class="sub">Beyond analysis — we help you put the plan into action.</p>
+    <div class="lp-feat">
+      <?php foreach (solution_catalog() as $s): ?>
+        <div class="card-os"><div class="card-os-body">
+          <h3><?= e($s['name']) ?>
+            <span class="badge-os <?= $s['active'] ? 'b-active' : 'b-scheduled' ?>"
+              style="font-size:10px;vertical-align:middle"><?= $s['active'] ? 'Available' : 'Coming soon' ?></span></h3>
+          <p style="color:var(--navy);font-weight:600;margin:0 0 8px"><?= e($s['tagline']) ?></p>
+          <ul style="margin:0;padding-left:18px;color:var(--muted);font-size:13.5px;line-height:1.7">
+            <?php foreach ($s['benefits'] as $b): ?><li><?= e($b) ?></li><?php endforeach; ?>
+          </ul>
+        </div></div>
+      <?php endforeach; ?>
+    </div>
+    <div style="text-align:center;margin-top:26px">
+      <a class="lp-btn primary" href="<?= e(url('signup.php')) ?>">Talk to us about your business</a>
     </div>
   </section>
 
