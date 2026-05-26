@@ -35,9 +35,10 @@ if ($role === 'super_admin') {
     ];
 } elseif ($role === 'client') {
     $nav['My Portal'] = [
-        ['Overview',     'client/portal.php',       '▣', null],
-        ['My Documents', 'client/documents.php',    '▦', null],
-        ['Appointments', 'client/appointments.php', '◷', null],
+        ['Overview',     'client/portal.php',          '▣', null],
+        ['Tax Planning', 'client/solution.php?key=tax','%', null],
+        ['My Documents', 'client/documents.php',       '▦', null],
+        ['Appointments', 'client/appointments.php',    '◷', null],
     ];
 } else {
     // tenant_admin, agency_leader, financial_advisor
@@ -74,7 +75,7 @@ if ($role === 'super_admin') {
       <div class="nav-label"><?= e($section) ?></div>
       <?php foreach ($items as [$label, $file, $icon, $perm]): ?>
         <?php if ($perm !== null && !has_permission($perm)) { continue; } ?>
-        <?php $active = $current === basename($file) ? ' active' : ''; ?>
+        <?php $active = $current === basename(strtok($file, '?')) ? ' active' : ''; ?>
         <a class="nav-item<?= $active ?>" href="<?= e(url($file)) ?>">
           <span class="ic"><?= $icon ?></span><span><?= e($label) ?></span>
         </a>
