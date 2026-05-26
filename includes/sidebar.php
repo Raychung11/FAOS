@@ -36,9 +36,14 @@ if ($role === 'super_admin') {
 } elseif ($role === 'client') {
     $nav['My Portal'] = [
         ['Overview',     'client/portal.php',          '▣', null],
-        ['Tax Planning', 'client/solution.php?key=tax','%', null],
         ['My Documents', 'client/documents.php',       '▦', null],
         ['Appointments', 'client/appointments.php',    '◷', null],
+    ];
+    $nav['Solutions'] = [
+        ['Tax Planning',           'client/solution.php?key=tax',           '%', null],
+        ['Business Restructuring', 'client/solution.php?key=restructuring', '▤', null, 'soon'],
+        ['Risk Planning',          'client/solution.php?key=risk',          '◈', null, 'soon'],
+        ['Shareholding & Equity',  'client/solution.php?key=equity',        '◆', null, 'soon'],
     ];
 } else {
     // tenant_admin, agency_leader, financial_advisor
@@ -73,11 +78,15 @@ if ($role === 'super_admin') {
   <nav class="nav-group">
     <?php foreach ($nav as $section => $items): ?>
       <div class="nav-label"><?= e($section) ?></div>
-      <?php foreach ($items as [$label, $file, $icon, $perm]): ?>
+      <?php foreach ($items as $item): ?>
+        <?php [$label, $file, $icon, $perm, $tag] = array_pad($item, 5, null); ?>
         <?php if ($perm !== null && !has_permission($perm)) { continue; } ?>
         <?php $active = $current === basename(strtok($file, '?')) ? ' active' : ''; ?>
         <a class="nav-item<?= $active ?>" href="<?= e(url($file)) ?>">
           <span class="ic"><?= $icon ?></span><span><?= e($label) ?></span>
+          <?php if ($tag): ?><span style="margin-left:auto;font-size:9px;font-weight:700;
+            background:rgba(255,255,255,.12);color:#c7d2e3;padding:2px 6px;border-radius:10px;
+            text-transform:uppercase;letter-spacing:.04em"><?= e($tag) ?></span><?php endif; ?>
         </a>
       <?php endforeach; ?>
     <?php endforeach; ?>

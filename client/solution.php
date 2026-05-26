@@ -12,15 +12,41 @@ $tid = (int) $c['tenant_id'];
 $key = preg_replace('/[^a-z0-9_]/i', '', (string) ($_GET['key'] ?? ''));
 $cat = solution_catalog();
 
-if (!isset($cat[$key]) || !$cat[$key]['active']) {
+if (!isset($cat[$key])) {
     http_response_code(404); exit('Solution not available.');
 }
-$s   = $cat[$key];
-$eng = solution_get((int) $c['id'], $key);
-[$slbl, $scls] = SOLUTION_STATUSES[$eng['status']];
+$s = $cat[$key];
 
 $pageTitle = $s['name'];
 require __DIR__ . '/../includes/header.php';
+
+if (!$s['active']):
+?>
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
+  <div>
+    <h2 style="margin:0;color:var(--navy)"><?= e($s['name']) ?>
+      <span class="badge-os b-scheduled" style="font-size:13px">Coming soon</span></h2>
+    <span class="muted"><?= e($s['tagline']) ?></span>
+  </div>
+  <a class="btn-os ghost sm" href="<?= e(url('client/portal.php')) ?>">Back to portal</a>
+</div>
+<div class="card-os">
+  <div class="card-os-head">What this will do for you</div>
+  <div class="card-os-body">
+    <ul style="margin:0 0 12px;padding-left:18px;line-height:1.8">
+      <?php foreach ($s['benefits'] as $b): ?><li><?= e($b) ?></li><?php endforeach; ?>
+    </ul>
+    <div class="alert-os info">This solution is coming soon. Speak to your
+      adviser if you'd like to be among the first to use it.</div>
+  </div>
+</div>
+<?php
+require __DIR__ . '/../includes/footer.php';
+return;
+endif;
+
+$eng = solution_get((int) $c['id'], $key);
+[$slbl, $scls] = SOLUTION_STATUSES[$eng['status']];
 ?>
 <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
   <div>
