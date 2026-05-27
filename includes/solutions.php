@@ -84,25 +84,33 @@ function solution_get(int $clientId, string $key): array
         'est_saving' => (float) ($e['est_saving'] ?? 0),
         'fee'        => (float) ($e['fee'] ?? 0),
         'notes'      => (string) ($e['notes'] ?? ''),
+        'report'     => (string) ($e['report'] ?? ''),
+        'report_at'  => (string) ($e['report_at'] ?? ''),
         'updated_at' => (string) ($e['updated_at'] ?? ''),
         'owner'      => (string) ($e['owner'] ?? ''),
     ];
 }
 
+/** Merge-save an engagement: only the supplied fields change. */
 function solution_save(int $clientId, string $key, array $in): void
 {
     if (!array_key_exists($key, solution_catalog())) {
         return;
     }
+    $cur = solution_get($clientId, $key);
+    $g = fn (string $f, $clean) => array_key_exists($f, $in) ? $clean : $cur[$f];
+
     $all = solution_engagements($clientId);
     $all[$key] = [
-        'status'     => array_key_exists($in['status'] ?? '', SOLUTION_STATUSES) ? $in['status'] : 'none',
-        'scope'      => trim(mb_substr((string) ($in['scope'] ?? ''), 0, 4000)),
-        'est_saving' => max(0.0, (float) ($in['est_saving'] ?? 0)),
-        'fee'        => max(0.0, (float) ($in['fee'] ?? 0)),
-        'notes'      => trim(mb_substr((string) ($in['notes'] ?? ''), 0, 2000)),
+        'status'     => array_key_exists($in['status'] ?? '', SOLUTION_STATUSES) ? $in['status'] : $cur['status'],
+        'scope'      => $g('scope', trim(mb_substr((string) ($in['scope'] ?? ''), 0, 4000))),
+        'est_saving' => $g('est_saving', max(0.0, (float) ($in['est_saving'] ?? 0))),
+        'fee'        => $g('fee', max(0.0, (float) ($in['fee'] ?? 0))),
+        'notes'      => $g('notes', trim(mb_substr((string) ($in['notes'] ?? ''), 0, 2000))),
+        'report'     => $g('report', mb_substr((string) ($in['report'] ?? ''), 0, 20000)),
+        'report_at'  => array_key_exists('report', $in) ? date('Y-m-d H:i') : $cur['report_at'],
         'updated_at' => date('Y-m-d H:i'),
-        'owner'      => current_user()['name'] ?? '',
+        'owner'      => current_user()['name'] ?? $cur['owner'],
     ];
     setting_put_json('solutions:' . $clientId, $all);
 }
