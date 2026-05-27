@@ -25,15 +25,17 @@ if (has_role('financial_advisor') && (int) $client['advisor_id'] !== (int) curre
 
 if (is_post()) {
     csrf_check();
-    if (input('action') === 'ai_report') {
-        $res = tax_report_generate($pdo, $tid, $clientId, $client);
-        solution_save($clientId, 'tax', ['report' => $res['text']]);
+    if (input('action') === 'ai_report' || input('action') === 'ai_plan') {
+        $mode = input('action') === 'ai_plan' ? 'planning' : 'full';
+        $res  = tax_report_generate($pdo, $tid, $clientId, $client, $mode);
+        solution_save($clientId, 'tax', [($mode === 'planning' ? 'plan_report' : 'report') => $res['text']]);
         meter_report('tax');
         audit_log('ai_generate', 'solution', $clientId,
-            'AI tax report' . ($res['stubbed'] ? ' (draft)' : ' (' . $res['model'] . ')'));
+            ($mode === 'planning' ? 'AI tax planning report' : 'AI tax report')
+            . ($res['stubbed'] ? ' (draft)' : ' (' . $res['model'] . ')'));
         set_flash($res['stubbed'] ? 'warning' : 'success',
-            $res['stubbed'] ? 'Data-driven tax report generated (no AI provider configured).'
-                            : 'AI tax report generated — review before sharing.');
+            $res['stubbed'] ? 'Data-driven report generated (no AI provider configured).'
+                            : 'AI report generated — review before sharing.');
         redirect('advisor/solution-tax.php?client_id=' . $clientId);
     }
     solution_save($clientId, 'tax', [
@@ -53,7 +55,7 @@ if (is_post()) {
  * figures; the AI writes the narrative + Part B using the firm's
  * knowledge base. Falls back to a data-driven draft offline.
  */
-function tax_report_generate(PDO $pdo, ?int $tid, int $clientId, array $client): array
+function tax_report_generate(PDO $pdo, ?int $tid, int $clientId, array $client, string $mode = 'full'): array
 {
     $ya  = tax_current_ya();
     $imp = tax_impact($pdo, $tid, $clientId);
@@ -90,25 +92,39 @@ function tax_report_generate(PDO $pdo, ?int $tid, int $clientId, array $client):
     }
 
     $kb = tax_kb_prompt();
-    $system = 'You are a Malaysian individual income tax specialist (ITA 1967 / LHDN) '
-        . 'preparing a client tax-planning report. CRITICAL: use ONLY the figures '
-        . 'provided below — never recompute, invent or "correct" any rate, relief cap '
-        . 'or amount. Produce two parts: (A) a concise computation summary built from '
-        . 'the given figures, showing the before/after position; (B) prioritised, '
-        . 'practical tax-optimisation recommendations. Frame Part B as points for the '
-        . 'licensed adviser / tax agent to review; flag any assumption to confirm. Be '
-        . 'specific and use the ringgit figures given.'
+    $common = 'You are a Malaysian individual income tax specialist (ITA 1967 / LHDN) '
+        . 'preparing client work. CRITICAL: use ONLY the figures provided below — '
+        . 'never recompute, invent or "correct" any rate, relief cap or amount. Frame '
+        . 'recommendations as points for the licensed adviser / tax agent to review; '
+        . 'flag any assumption to confirm. Be specific and use the ringgit figures given.'
         . ($kb !== '' ? "\n\nApply the firm's tax methodology and house style:\n" . $kb : '');
 
-    $user = "Write the tax planning report from these verified figures:\n\n" . $facts;
-
-    $stub = "TAX PLANNING REPORT — {$client['full_name']} (YA {$ya})\n\n"
-        . "PART A — POSITION\n" . $facts . "\n"
-        . "PART B — RECOMMENDATIONS\n"
-        . "- Maximise the reliefs showing room above (largest impact first).\n"
-        . ($imp['corp_rows'] ? "- Restructure company profit extraction to the efficient salary/dividend split.\n" : '')
-        . "- Confirm eligibility and documents for each relief before filing.\n"
-        . "- Review with a licensed tax agent.";
+    if ($mode === 'planning') {
+        $system = $common . "\n\nProduce a TAX PLANNING report — Part B ONLY: a "
+            . 'prioritised, numbered set of tax-optimisation strategies (relief '
+            . 'maximisation, employment package, business/structuring, family & estate, '
+            . 'investments, documentation). Do NOT reproduce the computation table.';
+        $user = "Write the Part B tax-optimisation plan. Use these verified figures as "
+            . "context (do not restate them as a computation):\n\n" . $facts;
+        $stub = "TAX PLANNING — RECOMMENDATIONS — {$client['full_name']} (YA {$ya})\n\n"
+            . "1. Relief maximisation — top up the reliefs showing room (largest impact first).\n"
+            . ($imp['corp_rows'] ? "2. Profit extraction — move to the efficient salary/dividend split.\n" : '')
+            . "3. Employment package — convert taxable cash allowances to accountable reimbursements.\n"
+            . "4. Family & estate — formalise arrangements; trust where a disabled dependant exists.\n"
+            . "5. Documentation — retain receipts/statements for every claim.\n"
+            . "Review with a licensed tax agent.";
+    } else {
+        $system = $common . "\n\nProduce: (A) a concise computation summary built from "
+            . 'the given figures; (B) prioritised, practical tax-optimisation recommendations.';
+        $user = "Write the tax planning report from these verified figures:\n\n" . $facts;
+        $stub = "TAX PLANNING REPORT — {$client['full_name']} (YA {$ya})\n\n"
+            . "PART A — POSITION\n" . $facts . "\n"
+            . "PART B — RECOMMENDATIONS\n"
+            . "- Maximise the reliefs showing room above (largest impact first).\n"
+            . ($imp['corp_rows'] ? "- Restructure company profit extraction to the efficient salary/dividend split.\n" : '')
+            . "- Confirm eligibility and documents for each relief before filing.\n"
+            . "- Review with a licensed tax agent.";
+    }
 
     return ai_complete($system, $user, 'tax_report', $stub);
 }
@@ -160,17 +176,29 @@ require __DIR__ . '/../includes/header.php';
       verified figures; the AI writes the Part A summary &amp; Part B planning using
       your <a href="<?= e(url('advisor/tax-knowledge.php')) ?>">Tax Knowledge Base</a>
       (<?= count(tax_kb_active()) ?> active entr<?= count(tax_kb_active())===1?'y':'ies' ?>).</p>
-    <form method="post" style="margin-bottom:<?= $eng['report'] !== '' ? '14px' : '0' ?>">
-      <?= csrf_field() ?>
-      <input type="hidden" name="action" value="ai_report">
-      <button class="btn-os gold"><?= $eng['report'] !== '' ? 'Regenerate report' : 'Generate AI report' ?></button>
-      <?php if ($eng['report_at']): ?>
-        <span class="muted" style="font-size:12px;margin-left:10px">Last generated <?= e($eng['report_at']) ?></span>
-      <?php endif; ?>
-    </form>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+      <form method="post" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="ai_report">
+        <button class="btn-os gold"><?= $eng['report'] !== '' ? 'Regenerate full report' : 'Full report (A + B)' ?></button>
+      </form>
+      <form method="post" style="margin:0">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="ai_plan">
+        <button class="btn-os"><?= $eng['plan_report'] !== '' ? 'Regenerate planning report' : 'Planning report (Part B)' ?></button>
+      </form>
+    </div>
     <?php if ($eng['report'] !== ''): ?>
-      <textarea rows="18" readonly style="width:100%;font-family:inherit;padding:14px;
+      <div class="muted" style="font-size:12px;margin:12px 0 4px">Full report (Part A + B) · generated <?= e($eng['report_at']) ?></div>
+      <textarea rows="16" readonly style="width:100%;font-family:inherit;padding:14px;
         border:1px solid var(--line);border-radius:10px;white-space:pre-wrap"><?= e($eng['report']) ?></textarea>
+    <?php endif; ?>
+    <?php if ($eng['plan_report'] !== ''): ?>
+      <div class="muted" style="font-size:12px;margin:12px 0 4px">Planning report (Part B only) · generated <?= e($eng['plan_report_at']) ?></div>
+      <textarea rows="14" readonly style="width:100%;font-family:inherit;padding:14px;
+        border:1px solid var(--line);border-radius:10px;white-space:pre-wrap"><?= e($eng['plan_report']) ?></textarea>
+    <?php endif; ?>
+    <?php if ($eng['report'] !== '' || $eng['plan_report'] !== ''): ?>
       <div class="disclaimer">AI-assisted draft. Figures are system-computed
         estimates; narrative and recommendations must be reviewed and approved by a
         licensed tax agent / financial adviser before sharing with the client.</div>

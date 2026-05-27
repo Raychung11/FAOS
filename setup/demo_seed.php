@@ -87,6 +87,63 @@ try {
         $out(' Seeded Tax Planning engagement for the demo client.');
     };
 
+    // Worked-example client "Mr Tan" — the full itemised tax case study.
+    $seedTaxCaseStudy = static function () use ($pdo, $tenantId, $advisorId, $creator, $out): void {
+        $ex = $pdo->prepare("SELECT id FROM clients WHERE tenant_id=? AND nric_passport='DEMO-CLIENT-TAN'");
+        $ex->execute([$tenantId]);
+        $tanId = (int) $ex->fetchColumn();
+        if (!$tanId) {
+            $pdo->prepare(
+                'INSERT INTO clients
+                  (tenant_id,full_name,nric_passport,marital_status,occupation,industry,
+                   dependents,risk_appetite,financial_goals,advisor_id,status,created_by)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,"active",?)'
+            )->execute([$tenantId,'Mr Tan (Tax Case Study)','DEMO-CLIENT-TAN','divorced',
+                'Director / Consultant','Professional services',3,'balanced',
+                'Minimise tax across employment, three businesses and rental; provide for a disabled child.',
+                $advisorId,$creator]);
+            $tanId = (int) $pdo->lastInsertId();
+        }
+        $up = $pdo->prepare(
+            'INSERT INTO settings (tenant_id,setting_key,setting_value) VALUES (?,?,?)
+             ON DUPLICATE KEY UPDATE setting_value=VALUES(setting_value)'
+        );
+        $up->execute([$tenantId,'taxcomp:' . $tanId, json_encode([
+            'employment' => [
+                ['label' => 'Annual gross salary', 'amount' => 300000, 'exempt' => 0],
+                ['label' => 'Car allowance (cash)', 'amount' => 24000, 'exempt' => 0],
+                ['label' => 'Golf club membership (perquisite)', 'amount' => 18000, 'exempt' => 0],
+                ['label' => 'Overseas leave passage', 'amount' => 16000, 'exempt' => 3000],
+            ],
+            'businesses' => [
+                ['name' => 'Consultancy', 'gross' => 50000, 'expenses' => 0, 'ca' => 0],
+                ['name' => 'DIY Laundry', 'gross' => 150000, 'expenses' => 90000, 'ca' => 10000],
+            ],
+            'rental' => [
+                ['name' => 'Airbnb (hotel-like services)', 'gross' => 30000, 'expenses' => 12000, 'type' => '4a'],
+                ['name' => 'Long-term rental', 'gross' => 24000, 'expenses' => 10000, 'type' => '4d'],
+            ],
+            'other' => [],
+            'donations' => 0,
+            'reliefs' => [
+                'children_u18' => 2, 'children_tertiary' => 0, 'disabled_u18' => 1,
+                'r_epf' => 33000, 'r_life' => 8000, 'r_medins' => 4000,
+                'r_parents_medical' => 12000, 'r_sspn' => 10000, 'r_spouse' => 36000,
+                'r_childcare' => 3000,
+            ],
+            'updated_at' => date('Y-m-d H:i'),
+        ])]);
+        $up->execute([$tenantId,'solutions:' . $tanId, json_encode(['tax' => [
+            'status' => 'proposed',
+            'scope'  => "Full itemised computation prepared (employment, 3 businesses, rental).\n"
+                      . "Optimise: claim mandatory EPF relief, confirm disabled-child certification,\n"
+                      . "formalise alimony, and review profit extraction.",
+            'est_saving' => 0.0, 'fee' => 3500.0, 'notes' => 'Worked example.',
+            'updated_at' => date('Y-m-d H:i'), 'owner' => 'Demo Advisor',
+        ]])]);
+        $out(' Seeded tax case-study client: Mr Tan (client #' . $tanId . ').');
+    };
+
     // --- Idempotency guard ---------------------------------------
     $exists = $pdo->prepare(
         "SELECT id FROM clients WHERE tenant_id=? AND nric_passport='DEMO-CLIENT-001'"
@@ -95,6 +152,7 @@ try {
     if ($cid = (int) $exists->fetchColumn()) {
         $out('Demo client #' . $cid . ' already present — refreshing reference data only.');
         $seedTaxAndSolutions($cid);
+        $seedTaxCaseStudy();
         $out('Done. (Delete the client in phpMyAdmin if you want a full reseed.)');
         if (!$isCli) { echo '</pre>'; }
         exit;
@@ -220,6 +278,7 @@ try {
 
     // --- Platform tax rates + Tax Planning engagement -----------
     $seedTaxAndSolutions($clientId);
+    $seedTaxCaseStudy();
 
     // --- Entrepreneur business profile (companies layer) ---------
     $hasCo = $pdo->prepare('SELECT id FROM companies WHERE client_id=? AND name=? LIMIT 1');

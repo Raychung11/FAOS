@@ -84,8 +84,10 @@ function solution_get(int $clientId, string $key): array
         'est_saving' => (float) ($e['est_saving'] ?? 0),
         'fee'        => (float) ($e['fee'] ?? 0),
         'notes'      => (string) ($e['notes'] ?? ''),
-        'report'     => (string) ($e['report'] ?? ''),
-        'report_at'  => (string) ($e['report_at'] ?? ''),
+        'report'      => (string) ($e['report'] ?? ''),
+        'report_at'   => (string) ($e['report_at'] ?? ''),
+        'plan_report'    => (string) ($e['plan_report'] ?? ''),
+        'plan_report_at' => (string) ($e['plan_report_at'] ?? ''),
         'updated_at' => (string) ($e['updated_at'] ?? ''),
         'owner'      => (string) ($e['owner'] ?? ''),
     ];
@@ -109,6 +111,8 @@ function solution_save(int $clientId, string $key, array $in): void
         'notes'      => $g('notes', trim(mb_substr((string) ($in['notes'] ?? ''), 0, 2000))),
         'report'     => $g('report', mb_substr((string) ($in['report'] ?? ''), 0, 20000)),
         'report_at'  => array_key_exists('report', $in) ? date('Y-m-d H:i') : $cur['report_at'],
+        'plan_report'    => $g('plan_report', mb_substr((string) ($in['plan_report'] ?? ''), 0, 20000)),
+        'plan_report_at' => array_key_exists('plan_report', $in) ? date('Y-m-d H:i') : $cur['plan_report_at'],
         'updated_at' => date('Y-m-d H:i'),
         'owner'      => current_user()['name'] ?? $cur['owner'],
     ];
