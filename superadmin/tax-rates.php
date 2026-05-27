@@ -50,6 +50,8 @@ if (is_post()) {
         'self_relief'      => max(0.0, (float) input('self_relief', 9000)),
         'child_relief'     => max(0.0, (float) input('child_relief', 2000)),
         'child_tertiary_relief' => max(0.0, (float) input('child_tertiary_relief', 8000)),
+        'disabled_child_relief' => max(0.0, (float) input('disabled_child_relief', 8000)),
+        'disabled_child_tertiary_relief' => max(0.0, (float) input('disabled_child_tertiary_relief', 16000)),
         'corp_sme_bands'   => tr_parse_bands((string) input('corp_sme_bands', ''), $def['corp_sme_bands']),
         'corp_flat'        => $flat,
         'reliefs'          => $reliefs ?: $def['reliefs'],
@@ -101,6 +103,10 @@ require __DIR__ . '/../includes/header.php';
             <input type="number" step="0.01" name="child_relief" value="<?= e($y['child_relief'] ?? 2000) ?>"></div>
           <div class="form-row"><label>Child relief — 18+ tertiary (RM)</label>
             <input type="number" step="0.01" name="child_tertiary_relief" value="<?= e($y['child_tertiary_relief'] ?? 8000) ?>"></div>
+          <div class="form-row"><label>Disabled child relief (RM)</label>
+            <input type="number" step="0.01" name="disabled_child_relief" value="<?= e($y['disabled_child_relief'] ?? 8000) ?>"></div>
+          <div class="form-row"><label>Disabled child 18+ tertiary (RM)</label>
+            <input type="number" step="0.01" name="disabled_child_tertiary_relief" value="<?= e($y['disabled_child_tertiary_relief'] ?? 16000) ?>"></div>
           <div class="form-row"><label>Rebate threshold (RM)</label>
             <input type="number" step="0.01" name="rebate_threshold" value="<?= e($y['rebate_threshold'] ?? 35000) ?>"></div>
           <div class="form-row"><label>Rebate amount (RM)</label>

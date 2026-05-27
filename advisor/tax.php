@@ -113,7 +113,8 @@ require __DIR__ . '/../includes/header.php';
     <h2 style="margin:0;color:var(--navy)">Income Tax Planning</h2>
     <span class="muted"><?= e($client['full_name']) ?> · follows LHDN individual reliefs (YA2024)</span>
   </div>
-  <div style="display:flex;gap:8px">
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn-os sm" href="<?= e(url('advisor/tax-compute.php?client_id='.$clientId)) ?>">Full computation</a>
     <a class="btn-os sm" href="<?= e(url('advisor/tax-report.php?client_id='.$clientId)) ?>">Before/After report</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/client-view.php?id='.$clientId)) ?>">Back to client</a>
   </div>

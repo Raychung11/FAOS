@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/solutions.php';
 require_once __DIR__ . '/../includes/insight.php';
 require_once __DIR__ . '/../includes/corptax.php';
 require_once __DIR__ . '/../includes/tax_kb.php';
+require_once __DIR__ . '/../includes/tax_compute.php';
 require_once __DIR__ . '/../includes/ai.php';
 require_once __DIR__ . '/../includes/billing.php';
 require_permission('financial.manage');
@@ -55,35 +56,37 @@ if (is_post()) {
 function tax_report_generate(PDO $pdo, ?int $tid, int $clientId, array $client): array
 {
     $ya  = tax_current_ya();
-    $sum = tax_summary($pdo, $tid, $clientId);
     $imp = tax_impact($pdo, $tid, $clientId);
-    $in  = setting_get_json('tax:' . $clientId, []);
 
-    // Relief detail: claimed vs cap vs room.
-    $reliefLines = [];
-    foreach (my_relief_catalogue() as $k => [$label, $cap, $group]) {
-        $claimed = min((float) $cap, max(0.0, (float) ($in['r_' . $k] ?? 0)));
-        $room = $cap - $claimed;
-        $reliefLines[] = sprintf('- %s: claimed RM %s of RM %s%s', $label,
-            money($claimed), money($cap), $room > 0 ? ' (room RM ' . money($room) . ')' : ' (maxed)');
+    if (taxcomp_exists($clientId)) {
+        // Itemised Part A from the full computation engine.
+        $facts = tax_compute_facts(tax_compute(taxcomp_get($clientId)), $client['full_name']);
+    } else {
+        // Summary-level facts from the quick tax planner.
+        $sum = tax_summary($pdo, $tid, $clientId);
+        $in  = setting_get_json('tax:' . $clientId, []);
+        $reliefLines = [];
+        foreach (my_relief_catalogue() as $k => [$label, $cap, $group]) {
+            $claimed = min((float) $cap, max(0.0, (float) ($in['r_' . $k] ?? 0)));
+            $room = $cap - $claimed;
+            $reliefLines[] = sprintf('- %s: claimed RM %s of RM %s%s', $label,
+                money($claimed), money($cap), $room > 0 ? ' (room RM ' . money($room) . ')' : ' (maxed)');
+        }
+        $facts = "Year of Assessment: {$ya} (Malaysia resident individual).\n"
+            . "Client: {$client['full_name']}.\n"
+            . 'Gross income: RM ' . money($imp['gross']) . ".\n"
+            . ($sum ? 'Chargeable income: RM ' . money($sum['chargeable'])
+                . '; estimated tax payable: RM ' . money($sum['tax_payable'])
+                . ' (effective ' . round($sum['eff_rate'] * 100, 1) . '%, marginal '
+                . (int) round($sum['marginal'] * 100) . "%).\n" : '')
+            . 'Personal reliefs maximisation saving: RM ' . money($imp['pers_saving']) . ".\n"
+            . "Reliefs (claimed / cap):\n" . implode("\n", $reliefLines) . "\n";
     }
 
-    $facts = "Year of Assessment: {$ya} (Malaysia resident individual).\n"
-        . "Client: {$client['full_name']}.\n"
-        . 'Gross income: RM ' . money($imp['gross']) . ".\n"
-        . ($sum ? 'Chargeable income: RM ' . money($sum['chargeable'])
-            . '; estimated tax payable: RM ' . money($sum['tax_payable'])
-            . ' (effective ' . round($sum['eff_rate'] * 100, 1) . '%, marginal '
-            . (int) round($sum['marginal'] * 100) . "%).\n" : '')
-        . 'BEFORE vs AFTER (verified): tax now RM ' . money($imp['before_total'])
-        . ' -> after optimisation RM ' . money($imp['after_total'])
-        . '; annual saving RM ' . money($imp['saving'])
-        . ' (' . round($imp['pct'], 1) . "%).\n"
-        . 'Personal tax saving from maximising reliefs: RM ' . money($imp['pers_saving']) . ".\n"
-        . "Reliefs (claimed / cap):\n" . implode("\n", $reliefLines) . "\n";
-    foreach ($imp['corp_rows'] as $r) {
+    // Corporate extraction (if companies exist) appended in both modes.
+    foreach ($imp['corp_rows'] as $cr) {
         $facts .= sprintf("Company %s: tax now RM %s -> efficient salary/dividend RM %s (save RM %s).\n",
-            $r['name'], money($r['before']), money($r['after']), money(max(0, $r['before'] - $r['after'])));
+            $cr['name'], money($cr['before']), money($cr['after']), money(max(0, $cr['before'] - $cr['after'])));
     }
 
     $kb = tax_kb_prompt();
@@ -140,6 +143,7 @@ require __DIR__ . '/../includes/header.php';
     <span class="muted"><?= e($client['full_name']) ?> · advanced solution engagement</span>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-compute.php?client_id='.$clientId)) ?>">Full computation</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-report.php?client_id='.$clientId)) ?>">Before/After report</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-knowledge.php')) ?>">Tax knowledge</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/solutions.php?client_id='.$clientId)) ?>">All solutions</a>

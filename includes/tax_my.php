@@ -31,13 +31,15 @@ function tax_defaults(): array
                 'self_relief'      => 9000,
                 'child_relief'     => 2000,
                 'child_tertiary_relief' => 8000,
+                'disabled_child_relief' => 8000,
+                'disabled_child_tertiary_relief' => 16000,
                 'corp_sme_bands'   => [[0, 150000, 0.15], [150000, 600000, 0.17], [600000, null, 0.24]],
                 'corp_flat'        => 0.24,
                 'reliefs' => [
                     'epf'             => ['label' => 'EPF / approved provident fund', 'cap' => 4000, 'group' => 'Retirement & insurance'],
                     'life'            => ['label' => 'Life insurance & takaful', 'cap' => 3000, 'group' => 'Retirement & insurance'],
                     'prs'             => ['label' => 'Deferred annuity & PRS', 'cap' => 3000, 'group' => 'Retirement & insurance'],
-                    'medins'          => ['label' => 'Education & medical insurance', 'cap' => 3000, 'group' => 'Retirement & insurance'],
+                    'medins'          => ['label' => 'Education & medical insurance', 'cap' => 4000, 'group' => 'Retirement & insurance'],
                     'socso'           => ['label' => 'SOCSO / EIS contribution', 'cap' => 350, 'group' => 'Retirement & insurance'],
                     'medical'         => ['label' => 'Serious illness, fertility, vaccination & check-up', 'cap' => 10000, 'group' => 'Medical'],
                     'parents_medical' => ['label' => 'Parents — medical, special needs & carer', 'cap' => 8000, 'group' => 'Medical'],
@@ -155,6 +157,16 @@ function my_child_relief(): float
 function my_child_tertiary_relief(): float
 {
     return (float) (tax_year()['child_tertiary_relief'] ?? 8000);
+}
+
+function my_disabled_child_relief(): float
+{
+    return (float) (tax_year()['disabled_child_relief'] ?? 8000);
+}
+
+function my_disabled_child_tertiary_relief(): float
+{
+    return (float) (tax_year()['disabled_child_tertiary_relief'] ?? 16000);
 }
 
 /** Relief catalogue: key => [label, cap, group]. */
