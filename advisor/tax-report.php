@@ -3,6 +3,7 @@
 declare(strict_types=1);
 require_once __DIR__ . '/../includes/bootstrap.php';
 require_once __DIR__ . '/../includes/corptax.php';   // pulls tax_my, business, settings
+require_once __DIR__ . '/../includes/tax_planb.php'; // also requires tax_compute
 require_once __DIR__ . '/../includes/solutions.php';
 require_permission('financial.manage');
 
@@ -107,7 +108,42 @@ require __DIR__ . '/../includes/header.php';
   </div>
 </div>
 
-<?php if ($topUps): ?>
+<?php if (taxcomp_exists($clientId)):
+    $r = tax_compute(taxcomp_get($clientId));
+    $aiText = trim($eng['plan_report']) !== '' ? $eng['plan_report'] : $eng['report'];
+    $aiCommentary = $aiText !== '' ? tax_planb_parse_ai($aiText) : [];
+    $sections = tax_planb_build($r, $eng, $aiCommentary);
+?>
+<style>
+  .planb h3 { color:var(--navy); margin:22px 0 8px; font-size:17px }
+  .planb p, .planb li { line-height:1.6; font-size:14px }
+</style>
+<div class="planb">
+  <h2 style="color:var(--navy);margin:18px 0 6px">Part B — Tax Planning &amp; Optimisation</h2>
+  <?php $secNum = 9; foreach ($sections as $sec): ?>
+    <h3><?= $secNum ?>. <?= e($sec['title']) ?></h3>
+    <?php if ($sec['type'] === 'table'): ?>
+      <table class="table-os">
+        <thead><tr><?php foreach ($sec['cols'] as $col): ?><th><?= e($col) ?></th><?php endforeach; ?></tr></thead>
+        <tbody>
+          <?php foreach ($sec['rows'] as $row): ?>
+            <tr><?php foreach ($row as $cell): ?><td><?= e((string) $cell) ?></td><?php endforeach; ?></tr>
+          <?php endforeach; ?>
+          <?php if (!$sec['rows']): ?><tr><td colspan="<?= count($sec['cols']) ?>" class="muted">Nothing to report in this section.</td></tr><?php endif; ?>
+        </tbody>
+      </table>
+    <?php else: ?>
+      <ul><?php foreach ($sec['items'] as $it): ?><li><?= e($it) ?></li><?php endforeach; ?></ul>
+    <?php endif; ?>
+    <?php if (!empty($sec['commentary']) && strcasecmp(trim($sec['commentary']), 'Not applicable.') !== 0): ?>
+      <div class="card-os" style="margin:6px 0 14px;background:#fbfbf3"><div class="card-os-body" style="padding:12px 16px">
+        <div class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--navy);margin-bottom:6px">Adviser commentary</div>
+        <p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-line"><?= e($sec['commentary']) ?></p>
+      </div></div>
+    <?php endif; ?>
+    <?php $secNum++; endforeach; ?>
+</div>
+<?php elseif ($topUps): ?>
 <div class="card-os" style="margin-bottom:18px">
   <div class="card-os-head">How we get there — recommended relief top-ups</div>
   <div class="card-os-body">
