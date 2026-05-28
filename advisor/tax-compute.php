@@ -63,7 +63,9 @@ if (is_post()) {
     taxcomp_save($clientId, [
         'employment' => $employment, 'businesses' => $businesses,
         'rental' => $rental, 'other' => $other,
-        'donations' => max(0.0, (float) input('donations', 0)), 'reliefs' => $reliefs,
+        'donations' => max(0.0, (float) input('donations', 0)),
+        'zakat'     => max(0.0, (float) input('zakat', 0)),
+        'reliefs'   => $reliefs,
     ]);
     meter_report('tax');
     audit_log('update', 'tax', $clientId, 'Full tax computation updated');
@@ -143,6 +145,9 @@ require __DIR__ . '/../includes/header.php';
         <tr><td>Less reliefs (self RM <?= money($r['self_relief']) ?> + child RM <?= money($r['child_relief']) ?> + claimed)</td>
           <td style="text-align:right">−RM <?= money($r['relief_before']) ?></td></tr>
         <tr><td><strong>Chargeable income</strong></td><td style="text-align:right"><strong>RM <?= money($r['chargeable']) ?></strong></td></tr>
+        <tr><td class="muted">Tax per resident graduated schedule</td><td style="text-align:right">RM <?= money($r['gross_tax']) ?></td></tr>
+        <?php if ($r['rebate'] > 0): ?><tr><td class="muted">Less: individual rebate (s.6A)</td><td style="text-align:right">−RM <?= money($r['rebate']) ?></td></tr><?php endif; ?>
+        <?php if ($r['zakat_applied'] > 0): ?><tr><td class="muted">Less: zakat rebate (s.6A(3))</td><td style="text-align:right">−RM <?= money($r['zakat_applied']) ?></td></tr><?php endif; ?>
         <tr><td><strong>Tax payable</strong></td><td style="text-align:right"><strong>RM <?= money($r['tax_payable']) ?></strong></td></tr>
       </tbody>
     </table>
@@ -212,8 +217,12 @@ require __DIR__ . '/../includes/header.php';
               <td><input type="number" step="0.01" name="oth_amount[]" value="<?= e($o['amount'] ?? '') ?>" style="width:120px"></td></tr>
           <?php endforeach; ?>
         </tbody></table>
-        <div class="card-os-body"><div class="form-row"><label>Approved donations (RM) — auto-capped at 10% of aggregate</label>
-          <input type="number" step="0.01" name="donations" value="<?= e($in['donations']) ?>"></div></div>
+        <div class="card-os-body">
+          <div class="form-row"><label>Approved donations (RM) — auto-capped at 10% of aggregate</label>
+            <input type="number" step="0.01" name="donations" value="<?= e($in['donations']) ?>"></div>
+          <div class="form-row"><label>Zakat paid (RM) — rebate against tax payable (s.6A(3))</label>
+            <input type="number" step="0.01" name="zakat" value="<?= e($in['zakat'] ?? 0) ?>"></div>
+        </div>
       </div>
     </div>
   </div>

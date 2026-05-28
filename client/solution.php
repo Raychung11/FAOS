@@ -97,6 +97,9 @@ if ($key === 'tax' && taxcomp_exists((int) $c['id'])):
     if (($sp = $find('spouse')) && $sp['claimed'] > 0) {
         $assumptions[] = 'Alimony / spouse relief claimed — assumes a formal / enforceable separation agreement or court order.';
     }
+    if (($r['zakat'] ?? 0) > 0) {
+        $assumptions[] = 'Zakat rebate claimed — assumes a valid receipt from an authorised collection centre (PPZ or state-equivalent).';
+    }
 ?>
 <div class="rep">
 
@@ -246,7 +249,8 @@ if ($key === 'tax' && taxcomp_exists((int) $c['id'])):
     <tr><td>Less: personal reliefs</td><td class="tnum">(<?= money($r['relief_before']) ?>)</td></tr>
     <tr><td><strong>Chargeable income</strong></td><td class="tnum"><strong><?= money($r['chargeable']) ?></strong></td></tr>
     <tr><td>Tax per resident graduated schedule</td><td class="tnum"><?= money($grossTax) ?></td></tr>
-    <?php if ($rebate > 0): ?><tr><td>Less: individual rebate</td><td class="tnum">(<?= money($rebate) ?>)</td></tr><?php endif; ?>
+    <?php if ($rebate > 0): ?><tr><td>Less: individual rebate (s.6A)</td><td class="tnum">(<?= money($rebate) ?>)</td></tr><?php endif; ?>
+    <?php if (($r['zakat_applied'] ?? 0) > 0): ?><tr><td>Less: zakat rebate (s.6A(3))</td><td class="tnum">(<?= money($r['zakat_applied']) ?>)</td></tr><?php endif; ?>
     <tr><td><strong>Estimated tax payable</strong></td><td class="tnum"><strong>RM <?= money($r['tax_payable']) ?></strong></td></tr>
   </tbody></table>
   <p style="margin-top:10px"><strong>Conclusion (Part A).</strong> Your estimated Malaysian income

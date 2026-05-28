@@ -25,6 +25,7 @@ function taxcomp_get(int $clientId): array
         'rental'     => $d['rental'] ?? [],
         'other'      => $d['other'] ?? [],
         'donations'  => (float) ($d['donations'] ?? 0),
+        'zakat'      => (float) ($d['zakat'] ?? 0),
         'reliefs'    => $d['reliefs'] ?? [],
         'updated_at' => (string) ($d['updated_at'] ?? ''),
     ];
@@ -126,10 +127,19 @@ function tax_compute(array $in): array
 
     [$reliefBefore, $reliefAfter, $reliefRows, $self, $child] = tc_reliefs($in['reliefs'] ?? [], $total);
 
+    $zakat = max(0.0, (float) ($in['zakat'] ?? 0));
+
     $chargeable      = max(0.0, $total - $reliefBefore);
-    $taxBefore       = max(0.0, my_tax_on($chargeable) - my_rebate($chargeable));
+    $grossTax        = my_tax_on($chargeable);
+    $rebateAmt       = my_rebate($chargeable);
+    $postRebate      = max(0.0, $grossTax - $rebateAmt);
+    $zakatApplied    = min($zakat, $postRebate);
+    $taxBefore       = max(0.0, $postRebate - $zakatApplied);
+
     $chargeableAfter = max(0.0, $total - $reliefAfter);
-    $taxAfter        = max(0.0, my_tax_on($chargeableAfter) - my_rebate($chargeableAfter));
+    $postRebateAfter = max(0.0, my_tax_on($chargeableAfter) - my_rebate($chargeableAfter));
+    $zakatAppliedA   = min($zakat, $postRebateAfter);
+    $taxAfter        = max(0.0, $postRebateAfter - $zakatAppliedA);
 
     return [
         'ya' => tax_current_ya(),
@@ -138,6 +148,8 @@ function tax_compute(array $in): array
         'rent_rows' => $rentRows, 'rent_passive' => $rentPassive, 'rent_active' => $rentActive,
         'other_rows' => $otherRows, 'other' => $other,
         'aggregate' => $aggregate, 'donations' => $donations, 'don_cap' => $donCap,
+        'zakat' => $zakat, 'zakat_applied' => $zakatApplied,
+        'gross_tax' => $grossTax, 'rebate' => $rebateAmt,
         'total' => $total,
         'relief_rows' => $reliefRows, 'self_relief' => $self, 'child_relief' => $child,
         'child_counts' => [
@@ -196,6 +208,7 @@ function tax_compute_facts(array $r, string $clientName): string
         . "Total income: {$m($r['total'])}.\n"
         . "Reliefs claimed: {$m($r['relief_before'])} (self {$m($r['self_relief'])}, child {$m($r['child_relief'])}).\n"
         . "Chargeable income: {$m($r['chargeable'])}.\n"
+        . ($r['zakat_applied'] > 0 ? "Zakat rebate applied: {$m($r['zakat_applied'])} (of {$m($r['zakat'])} paid).\n" : '')
         . "Tax payable: {$m($r['tax_payable'])} (marginal " . (int) round($r['marginal'] * 100) . "%).\n";
 
     $room = array_values(array_filter($r['relief_rows'], fn ($x) => $x['room'] > 0));

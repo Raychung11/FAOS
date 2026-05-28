@@ -173,6 +173,7 @@ function tax_planb_build(array $r, array $eng = [], array $aiCommentary = []): a
         }
     }
     if ($hasDisabled) { $doc[] = 'Disabled child OKU / medical certification'; }
+    if (($r['zakat'] ?? 0) > 0) { $doc[] = 'Zakat receipt from authorised collection centre (PPZ / similar)'; }
     $sections['doc'] = ['title' => TAX_PLANB_SECTIONS['doc'], 'type' => 'bullets',
                         'items' => array_values(array_unique($doc))];
 
