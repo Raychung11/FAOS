@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/solutions.php';
 require_once __DIR__ . '/../includes/insight.php';
 require_once __DIR__ . '/../includes/corptax.php';
 require_once __DIR__ . '/../includes/tax_kb.php';
+require_once __DIR__ . '/../includes/tax_planb.php';
 require_once __DIR__ . '/../includes/tax_compute.php';
 require_once __DIR__ . '/../includes/ai.php';
 require_once __DIR__ . '/../includes/billing.php';
@@ -25,6 +26,25 @@ if (has_role('financial_advisor') && (int) $client['advisor_id'] !== (int) curre
 
 if (is_post()) {
     csrf_check();
+    if (input('action') === 'ai_section') {
+        $section = preg_replace('/[^a-z]/', '', strtolower((string) input('section_key', '')));
+        $allowed = ['employment','business','rental','relief','family','investment'];
+        if (!in_array($section, $allowed, true)) {
+            set_flash('danger', 'Unknown section.');
+            redirect('advisor/solution-tax.php?client_id=' . $clientId);
+        }
+        $res = tax_section_generate($pdo, $tid, $clientId, $client, $section);
+        $cur = solution_get($clientId, 'tax');
+        $merged = tax_planb_merge_section((string) $cur['plan_report'], $section, $res['text']);
+        solution_save($clientId, 'tax', ['plan_report' => $merged]);
+        meter_report('tax');
+        audit_log('ai_generate', 'solution', $clientId,
+            'AI tax §' . $section . ($res['stubbed'] ? ' (draft)' : ' (' . $res['model'] . ')'));
+        set_flash($res['stubbed'] ? 'warning' : 'success',
+            $res['stubbed'] ? 'Data-driven section drafted (no AI provider configured).'
+                            : 'Section commentary regenerated.');
+        redirect('advisor/solution-tax.php?client_id=' . $clientId);
+    }
     if (input('action') === 'ai_report' || input('action') === 'ai_plan') {
         $mode = input('action') === 'ai_plan' ? 'planning' : 'full';
         $res  = tax_report_generate($pdo, $tid, $clientId, $client, $mode);
@@ -139,6 +159,56 @@ function tax_report_generate(PDO $pdo, ?int $tid, int $clientId, array $client, 
     return ai_complete($system, $user, 'tax_report', $stub);
 }
 
+/** Regenerate the AI commentary for a single Part B section only. */
+function tax_section_generate(PDO $pdo, ?int $tid, int $clientId, array $client, string $section): array
+{
+    $ya  = tax_current_ya();
+    $imp = tax_impact($pdo, $tid, $clientId);
+
+    if (taxcomp_exists($clientId)) {
+        $facts = tax_compute_facts(tax_compute(taxcomp_get($clientId)), $client['full_name']);
+    } else {
+        $sum = tax_summary($pdo, $tid, $clientId);
+        $facts = "Year of Assessment {$ya}.\nClient: {$client['full_name']}.\n"
+            . 'Gross income RM ' . money($imp['gross']) . '.';
+        if ($sum) {
+            $facts .= "\nChargeable income RM " . money($sum['chargeable'])
+                . '; tax payable RM ' . money($sum['tax_payable']) . '.';
+        }
+    }
+    foreach ($imp['corp_rows'] as $cr) {
+        $facts .= sprintf("\nCompany %s: tax now RM %s -> efficient salary/dividend RM %s.",
+            $cr['name'], money($cr['before']), money($cr['after']));
+    }
+
+    $title = TAX_PLANB_SECTIONS[$section] ?? ucfirst($section);
+    $kb = tax_kb_prompt();
+    $system = 'You are a Malaysian individual income tax specialist (ITA 1967 / LHDN). '
+        . 'CRITICAL: use ONLY the figures provided below — never recompute or invent '
+        . 'rates, caps or amounts. Frame as adviser-grade points for the licensed '
+        . "adviser / tax agent to review.\n\n"
+        . "Write ONLY the commentary for ONE section: \"{$title}\" (key: {$section}). "
+        . "Output exactly one block, starting with the header `## SECTION: {$section}` "
+        . "on its own line, followed by 3-6 sentences of specific, useful adviser "
+        . "commentary. Do NOT write other sections, headings or computation tables — "
+        . "those are rendered by the system."
+        . ($kb !== '' ? "\n\nApply the firm's tax methodology and house style:\n" . $kb : '');
+
+    $user = "Write the section commentary using these verified figures as context:\n\n" . $facts;
+
+    $hints = [
+        'employment'  => 'Focus on classification of allowances/perquisites, accountable reimbursements, and leave-passage handling.',
+        'business'    => 'Focus on incorporation triggers, deductibility discipline and capital-allowance schedule.',
+        'rental'      => 'Focus on s.4(a) vs s.4(d), licensing/SST/tourism tax, pre-letting vs recurring expenses.',
+        'relief'      => 'Focus on which relief top-ups give the largest before-year-end impact, with eligibility caveats.',
+        'family'      => 'Focus on will, beneficiaries, trust for disabled dependants, formalising alimony.',
+        'investment'  => 'Focus on YA dividend tax, PRS/SSPN within caps, anti-avoidance (s.140), RPGT awareness.',
+    ];
+    $stub = "## SECTION: {$section}\n" . ($hints[$section] ?? 'Review with a licensed tax agent.');
+
+    return ai_complete($system, $user, 'tax_section_' . $section, $stub);
+}
+
 // --- Findings pulled from the existing analyses ------------------
 $taxP = tax_summary($pdo, $tid, $clientId);
 $persSaving = $taxP['max_saving'] ?? 0.0;
@@ -213,6 +283,43 @@ require __DIR__ . '/../includes/header.php';
         estimates; narrative and recommendations must be reviewed and approved by a
         licensed tax agent / financial adviser before sharing with the client.</div>
     <?php endif; ?>
+  </div>
+</div>
+
+<div class="card-os" style="margin-bottom:18px">
+  <div class="card-os-head">Refine Part B — regenerate a single section</div>
+  <div class="card-os-body" style="padding:0">
+    <?php $secCommentary = $eng['plan_report'] !== '' ? tax_planb_parse_ai($eng['plan_report']) : [];
+          $refineKeys = ['employment','business','rental','relief','family','investment']; ?>
+    <table class="table-os">
+      <thead><tr><th>Section</th><th>Status</th><th></th></tr></thead>
+      <tbody>
+      <?php foreach ($refineKeys as $k):
+        $has = !empty($secCommentary[$k]);
+        $preview = $has ? mb_strimwidth((string) $secCommentary[$k], 0, 110, '…') : ''; ?>
+        <tr>
+          <td><strong><?= e(TAX_PLANB_SECTIONS[$k]) ?></strong>
+            <?php if ($preview !== ''): ?>
+              <div class="muted" style="font-size:12px;margin-top:2px"><?= e($preview) ?></div>
+            <?php endif; ?></td>
+          <td><span class="badge-os <?= $has ? 'b-active' : 'b-warn' ?>"><?= $has ? 'Present' : 'Empty' ?></span></td>
+          <td style="text-align:right;white-space:nowrap">
+            <form method="post" style="display:inline">
+              <?= csrf_field() ?>
+              <input type="hidden" name="action" value="ai_section">
+              <input type="hidden" name="section_key" value="<?= e($k) ?>">
+              <button class="btn-os ghost sm"><?= $has ? 'Regenerate' : 'Generate' ?></button>
+            </form>
+          </td>
+        </tr>
+      <?php endforeach; ?>
+      </tbody>
+    </table>
+    <div class="card-os-body" style="padding:14px 18px">
+      <div class="muted" style="font-size:12px">Single-section regeneration updates only that
+        section in the saved Planning report — the others stay as-is. The Part A
+        computation and the auto-generated tables &amp; bullets are not affected.</div>
+    </div>
   </div>
 </div>
 

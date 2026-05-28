@@ -196,6 +196,29 @@ function tax_planb_build(array $r, array $eng = [], array $aiCommentary = []): a
 }
 
 /**
+ * Replace (or insert) the commentary for one section in an existing
+ * plan_report blob and return the rebuilt blob in canonical section
+ * order. Pure — uses the parser above.
+ */
+function tax_planb_merge_section(string $existing, string $key, string $text): string
+{
+    $key  = strtolower(trim($key));
+    $secs = tax_planb_parse_ai($existing);
+    $secs[$key] = trim($text);
+    $out = [];
+    foreach (array_keys(TAX_PLANB_SECTIONS) as $k) {
+        if (isset($secs[$k])) {
+            $out[] = "## SECTION: {$k}\n" . $secs[$k];
+            unset($secs[$k]);
+        }
+    }
+    foreach ($secs as $k => $v) {
+        $out[] = "## SECTION: {$k}\n" . $v;
+    }
+    return implode("\n\n", $out);
+}
+
+/**
  * Parse AI output tagged with `## SECTION: <key>` blocks into a
  * section_key => text map. Tolerant of variants (##, ###, leading
  * numbers, optional colons).
