@@ -100,19 +100,29 @@ function tax_report_generate(PDO $pdo, ?int $tid, int $clientId, array $client, 
         . ($kb !== '' ? "\n\nApply the firm's tax methodology and house style:\n" . $kb : '');
 
     if ($mode === 'planning') {
-        $system = $common . "\n\nProduce a TAX PLANNING report — Part B ONLY: a "
-            . 'prioritised, numbered set of tax-optimisation strategies (relief '
-            . 'maximisation, employment package, business/structuring, family & estate, '
-            . 'investments, documentation). Do NOT reproduce the computation table.';
-        $user = "Write the Part B tax-optimisation plan. Use these verified figures as "
+        $system = $common . "\n\nProduce TAX PLANNING commentary as adviser-grade notes "
+            . "in the firm's standard section structure. Use these EXACT section headers, "
+            . "one per line, and write 2-4 concise sentences UNDER each that ADD insight "
+            . "(do NOT restate the figures or repeat the data tables — those are rendered "
+            . "by the system). Use ringgit figures only when they sharpen a recommendation. "
+            . "If a section is not applicable to this client, write 'Not applicable.' under "
+            . "it. Required section headers:\n"
+            . "## SECTION: employment\n## SECTION: business\n## SECTION: rental\n"
+            . "## SECTION: relief\n## SECTION: family\n## SECTION: investment";
+        $user = "Write the Part B tax-optimisation commentary. Use these verified figures as "
             . "context (do not restate them as a computation):\n\n" . $facts;
-        $stub = "TAX PLANNING — RECOMMENDATIONS — {$client['full_name']} (YA {$ya})\n\n"
-            . "1. Relief maximisation — top up the reliefs showing room (largest impact first).\n"
-            . ($imp['corp_rows'] ? "2. Profit extraction — move to the efficient salary/dividend split.\n" : '')
-            . "3. Employment package — convert taxable cash allowances to accountable reimbursements.\n"
-            . "4. Family & estate — formalise arrangements; trust where a disabled dependant exists.\n"
-            . "5. Documentation — retain receipts/statements for every claim.\n"
-            . "Review with a licensed tax agent.";
+        $stub = "## SECTION: employment\nFocus on converting cash allowances into accountable "
+            . "reimbursements and on documenting leave-passage classification before year end.\n\n"
+            . "## SECTION: business\nKeep separate records per business and maintain a capital-allowance "
+            . "schedule. Evaluate incorporation if profits continue to grow.\n\n"
+            . "## SECTION: rental\nFor active rental, formalise SST/tourism-tax/licensing posture. "
+            . "For long-term rental, distinguish repairs from capital improvements.\n\n"
+            . "## SECTION: relief\nPrioritise relief top-ups with the largest room first, subject "
+            . "to eligibility and supporting documents.\n\n"
+            . "## SECTION: family\nReview will, beneficiary nominations and any trust needs after "
+            . "material life events; secure formal agreements where relief depends on them.\n\n"
+            . "## SECTION: investment\nReview portfolio composition for the YA{$ya} dividend tax "
+            . "implications and avoid arrangements lacking commercial substance.";
     } else {
         $system = $common . "\n\nProduce: (A) a concise computation summary built from "
             . 'the given figures; (B) prioritised, practical tax-optimisation recommendations.';

@@ -140,6 +140,12 @@ function tax_compute(array $in): array
         'aggregate' => $aggregate, 'donations' => $donations, 'don_cap' => $donCap,
         'total' => $total,
         'relief_rows' => $reliefRows, 'self_relief' => $self, 'child_relief' => $child,
+        'child_counts' => [
+            'u18'               => (int) ($in['reliefs']['children_u18'] ?? 0),
+            'tertiary'          => (int) ($in['reliefs']['children_tertiary'] ?? 0),
+            'disabled_u18'      => (int) ($in['reliefs']['disabled_u18'] ?? 0),
+            'disabled_tertiary' => (int) ($in['reliefs']['disabled_tertiary'] ?? 0),
+        ],
         'relief_before' => $reliefBefore, 'relief_after' => $reliefAfter,
         'chargeable' => $chargeable, 'tax_payable' => $taxBefore,
         'marginal' => my_marginal_rate($chargeable),

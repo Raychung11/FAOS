@@ -6,6 +6,7 @@ require_once __DIR__ . '/_client.php';
 require_once __DIR__ . '/../includes/solutions.php';
 require_once __DIR__ . '/../includes/corptax.php';
 require_once __DIR__ . '/../includes/tax_compute.php';
+require_once __DIR__ . '/../includes/tax_planb.php';
 
 $c   = portal_client();
 $pdo = db();
@@ -255,57 +256,46 @@ if ($key === 'tax' && taxcomp_exists((int) $c['id'])):
     (annual saving ≈ <span style="color:var(--ok);font-weight:600">RM <?= money($r['saving']) ?></span>).</p>
 
   <h2 style="color:var(--navy);margin-top:24px">Part B — Tax Planning &amp; Optimisation</h2>
-  <?php if (trim($eng['plan_report']) !== ''): ?>
-    <div class="card-os"><div class="card-os-body">
-      <pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;margin:0"><?= e($eng['plan_report']) ?></pre>
-    </div></div>
-  <?php elseif (trim($eng['report']) !== ''): ?>
-    <div class="card-os"><div class="card-os-body">
-      <pre style="white-space:pre-wrap;font-family:inherit;font-size:14px;margin:0"><?= e($eng['report']) ?></pre>
-    </div></div>
-  <?php else: ?>
-    <p>Your adviser is finalising the personalised recommendations. The headline themes are:</p>
-    <ul>
-      <li>Maximise the LHDN reliefs where room remains (top up the largest-impact ones first).</li>
-      <li>Restructure employment package — convert taxable cash allowances into accountable reimbursements (receipts, logbooks).</li>
-      <li>Where a business exists, consider tax-efficient profit extraction (salary / dividend mix) and a proper capital-allowance schedule.</li>
-      <li>For active rental (Airbnb/short-let), keep separate records and review service tax / local licensing.</li>
-      <li>Document family arrangements (alimony agreement, OKU/medical certification, kindergarten receipts) to secure each claim.</li>
-      <li>Avoid arrangements lacking commercial substance (s.140 anti-avoidance).</li>
-    </ul>
-  <?php endif; ?>
 
   <?php if ($eng['est_saving'] > 0 || $eng['fee'] > 0 || trim($eng['scope']) !== ''): ?>
-  <h3>Engagement</h3>
-  <p>
-    <strong>Status:</strong> <?= e($slbl) ?>
+  <div class="card-os" style="margin-bottom:14px"><div class="card-os-body" style="padding:14px 18px">
+    <strong>Engagement:</strong> <?= e($slbl) ?>
     <?php if ($eng['est_saving'] > 0): ?> · <strong>Estimated annual value:</strong> RM <?= money($eng['est_saving']) ?><?php endif; ?>
     <?php if ($eng['fee'] > 0): ?> · <strong>Fee:</strong> RM <?= money($eng['fee']) ?><?php endif; ?>
-  </p>
-  <?php if (trim($eng['scope']) !== ''): ?>
-    <p style="white-space:pre-line"><strong>Scope of work:</strong> <?= e($eng['scope']) ?></p>
-  <?php endif; ?>
+    <?php if (trim($eng['scope']) !== ''): ?>
+      <div style="margin-top:6px;white-space:pre-line"><strong>Scope of work.</strong> <?= e($eng['scope']) ?></div>
+    <?php endif; ?>
+  </div></div>
   <?php endif; ?>
 
-  <h3>Documentation checklist</h3>
-  <ul>
-    <li>EA Form and employer benefit statements</li>
-    <li>Business invoices, receipts and bank statements</li>
-    <li>Capital allowance schedule and asset invoices</li>
-    <li>Rental agreements, loan interest statements and property expense receipts</li>
-    <li>SSPN, EPF and insurance premium statements</li>
-    <li>Parents' medical bills and proof of payment</li>
-    <li>Disabled child certification (if applicable)</li>
-    <li>Kindergarten / TASKA receipts (if applicable)</li>
-    <li>Former-spouse maintenance agreement and bank proof (if applicable)</li>
-  </ul>
-
-  <h3>References</h3>
-  <ul>
-    <li>Income Tax Act 1967 — Sections 4(a), 4(b), 4(d), 13(1), 33(1), 44(2), 140.</li>
-    <li>LHDN Public Rulings on Perquisites from Employment and Income from Letting of Real Property.</li>
-    <li>LHDN YA <?= (int) $r['ya'] ?> resident individual tax rates and relief schedule.</li>
-  </ul>
+  <?php
+    $aiText = trim($eng['plan_report']) !== '' ? $eng['plan_report'] : $eng['report'];
+    $aiCommentary = $aiText !== '' ? tax_planb_parse_ai($aiText) : [];
+    $sections = tax_planb_build($r, $eng, $aiCommentary);
+    $secNum = 9;
+  ?>
+  <?php foreach ($sections as $sec): ?>
+    <h3><?= $secNum ?>. <?= e($sec['title']) ?></h3>
+    <?php if ($sec['type'] === 'table'): ?>
+      <table class="table-os">
+        <thead><tr><?php foreach ($sec['cols'] as $col): ?><th><?= e($col) ?></th><?php endforeach; ?></tr></thead>
+        <tbody>
+          <?php foreach ($sec['rows'] as $row): ?>
+            <tr><?php foreach ($row as $cell): ?><td><?= e((string) $cell) ?></td><?php endforeach; ?></tr>
+          <?php endforeach; ?>
+          <?php if (!$sec['rows']): ?><tr><td colspan="<?= count($sec['cols']) ?>" class="muted">Nothing to report in this section.</td></tr><?php endif; ?>
+        </tbody>
+      </table>
+    <?php else: ?>
+      <ul><?php foreach ($sec['items'] as $it): ?><li><?= e($it) ?></li><?php endforeach; ?></ul>
+    <?php endif; ?>
+    <?php if (!empty($sec['commentary']) && trim($sec['commentary']) !== '' && strcasecmp(trim($sec['commentary']), 'Not applicable.') !== 0): ?>
+      <div class="card-os" style="margin:6px 0 14px;background:#fbfbf3"><div class="card-os-body" style="padding:12px 16px">
+        <div class="muted" style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--navy);margin-bottom:6px">Adviser commentary</div>
+        <p style="margin:0;font-size:14px;line-height:1.6;white-space:pre-line"><?= e($sec['commentary']) ?></p>
+      </div></div>
+    <?php endif; ?>
+    <?php $secNum++; endforeach; ?>
 
   <div class="card-os" style="margin-top:18px"><div class="card-os-body">
     <div class="disclaimer">This report is an indicative estimate for advisory
