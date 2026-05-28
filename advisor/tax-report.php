@@ -50,7 +50,8 @@ require __DIR__ . '/../includes/header.php';
     <span class="muted"><?= e($client['full_name']) ?> · before vs after our analysis · <?= e(date('d M Y')) ?></span>
   </div>
   <div class="noprint" style="display:flex;gap:8px">
-    <button class="btn-os sm" onclick="window.print()">Print / Save PDF</button>
+    <a class="btn-os sm" href="<?= e(url('advisor/tax-pdf.php?client_id='.$clientId)) ?>">Download report PDF</a>
+    <button class="btn-os ghost sm" onclick="window.print()">Print this page</button>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/solution-tax.php?client_id='.$clientId)) ?>">Back</a>
   </div>
 </div>

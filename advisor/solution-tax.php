@@ -239,6 +239,7 @@ require __DIR__ . '/../includes/header.php';
     <span class="muted"><?= e($client['full_name']) ?> · advanced solution engagement</span>
   </div>
   <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn-os sm" href="<?= e(url('advisor/tax-pdf.php?client_id='.$clientId)) ?>">Download report PDF</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-compute.php?client_id='.$clientId)) ?>">Full computation</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-report.php?client_id='.$clientId)) ?>">Before/After report</a>
     <a class="btn-os ghost sm" href="<?= e(url('advisor/tax-knowledge.php')) ?>">Tax knowledge</a>
