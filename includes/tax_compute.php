@@ -26,6 +26,9 @@ function taxcomp_get(int $clientId): array
         'other'      => $d['other'] ?? [],
         'donations'  => (float) ($d['donations'] ?? 0),
         'zakat'      => (float) ($d['zakat'] ?? 0),
+        'assessment_type' => in_array($d['assessment_type'] ?? 'separate', ['separate','joint'], true) ? $d['assessment_type'] : 'separate',
+        'spouse_income'   => (float) ($d['spouse_income'] ?? 0),
+        'spouse_reliefs'  => (float) ($d['spouse_reliefs'] ?? 0),
         'reliefs'    => $d['reliefs'] ?? [],
         'updated_at' => (string) ($d['updated_at'] ?? ''),
     ];
@@ -129,17 +132,60 @@ function tax_compute(array $in): array
 
     $zakat = max(0.0, (float) ($in['zakat'] ?? 0));
 
-    $chargeable      = max(0.0, $total - $reliefBefore);
-    $grossTax        = my_tax_on($chargeable);
-    $rebateAmt       = my_rebate($chargeable);
-    $postRebate      = max(0.0, $grossTax - $rebateAmt);
-    $zakatApplied    = min($zakat, $postRebate);
-    $taxBefore       = max(0.0, $postRebate - $zakatApplied);
+    $assessIn      = $in['assessment_type'] ?? 'separate';
+    $assess        = in_array($assessIn, ['separate', 'joint'], true) ? $assessIn : 'separate';
+    $spouseIncome  = max(0.0, (float) ($in['spouse_income'] ?? 0));
+    $spouseReliefs = (float) ($in['spouse_reliefs'] ?? 0);
+    if ($spouseReliefs <= 0) { $spouseReliefs = my_self_relief(); } // sensible default
 
-    $chargeableAfter = max(0.0, $total - $reliefAfter);
-    $postRebateAfter = max(0.0, my_tax_on($chargeableAfter) - my_rebate($chargeableAfter));
-    $zakatAppliedA   = min($zakat, $postRebateAfter);
-    $taxAfter        = max(0.0, $postRebateAfter - $zakatAppliedA);
+    /** Apply rebate + zakat to a gross-tax figure, capped. */
+    $applyRebatesZakat = static function (float $chargeable, float $zakatAmt) {
+        $gross = my_tax_on($chargeable);
+        $reb   = my_rebate($chargeable);
+        $post  = max(0.0, $gross - $reb);
+        $zkA   = min($zakatAmt, $post);
+        return ['gross' => $gross, 'rebate' => $reb, 'zakat_applied' => $zkA,
+                'tax' => max(0.0, $post - $zkA)];
+    };
+
+    // Separate (principal alone)
+    $chargeableSep = max(0.0, $total - $reliefBefore);
+    $sepBase = $applyRebatesZakat($chargeableSep, $zakat);
+
+    // Spouse's own separate tax (rough — uses spouse_reliefs flat, no zakat).
+    $spouseChargeable = max(0.0, $spouseIncome - $spouseReliefs);
+    $spouseTaxSep     = max(0.0, my_tax_on($spouseChargeable) - my_rebate($spouseChargeable));
+    $separateTotalTax = $sepBase['tax'] + $spouseTaxSep;
+
+    // Joint (combined income on the principal, principal's reliefs only)
+    $chargeableJoint = max(0.0, $total + $spouseIncome - $reliefBefore);
+    $jntBase = $applyRebatesZakat($chargeableJoint, $zakat);
+
+    $jointBetter = $jntBase['tax'] < $separateTotalTax - 0.5;
+
+    // Headline reflects the elected assessment.
+    if ($assess === 'joint') {
+        $chargeable    = $chargeableJoint;
+        $grossTax      = $jntBase['gross'];
+        $rebateAmt     = $jntBase['rebate'];
+        $zakatApplied  = $jntBase['zakat_applied'];
+        $taxBefore     = $jntBase['tax'];
+    } else {
+        $chargeable    = $chargeableSep;
+        $grossTax      = $sepBase['gross'];
+        $rebateAmt     = $sepBase['rebate'];
+        $zakatApplied  = $sepBase['zakat_applied'];
+        $taxBefore     = $sepBase['tax'];
+    }
+
+    // "After" (reliefs fully utilised) — mirrors the elected assessment.
+    if ($assess === 'joint') {
+        $chargeableAfter = max(0.0, $total + $spouseIncome - $reliefAfter);
+    } else {
+        $chargeableAfter = max(0.0, $total - $reliefAfter);
+    }
+    $aftBase   = $applyRebatesZakat($chargeableAfter, $zakat);
+    $taxAfter  = $aftBase['tax'];
 
     return [
         'ya' => tax_current_ya(),
@@ -150,6 +196,19 @@ function tax_compute(array $in): array
         'aggregate' => $aggregate, 'donations' => $donations, 'don_cap' => $donCap,
         'zakat' => $zakat, 'zakat_applied' => $zakatApplied,
         'gross_tax' => $grossTax, 'rebate' => $rebateAmt,
+        'assessment' => [
+            'type' => $assess,
+            'spouse_income' => $spouseIncome,
+            'spouse_reliefs' => $spouseReliefs,
+            'separate_principal_tax' => $sepBase['tax'],
+            'separate_spouse_tax' => $spouseTaxSep,
+            'separate_total_tax' => $separateTotalTax,
+            'joint_tax' => $jntBase['tax'],
+            'recommended' => $jointBetter ? 'joint' : 'separate',
+            'saving' => max(0.0, abs($separateTotalTax - $jntBase['tax'])),
+            'chargeable_separate' => $chargeableSep,
+            'chargeable_joint' => $chargeableJoint,
+        ],
         'total' => $total,
         'relief_rows' => $reliefRows, 'self_relief' => $self, 'child_relief' => $child,
         'child_counts' => [
@@ -209,7 +268,13 @@ function tax_compute_facts(array $r, string $clientName): string
         . "Reliefs claimed: {$m($r['relief_before'])} (self {$m($r['self_relief'])}, child {$m($r['child_relief'])}).\n"
         . "Chargeable income: {$m($r['chargeable'])}.\n"
         . ($r['zakat_applied'] > 0 ? "Zakat rebate applied: {$m($r['zakat_applied'])} (of {$m($r['zakat'])} paid).\n" : '')
-        . "Tax payable: {$m($r['tax_payable'])} (marginal " . (int) round($r['marginal'] * 100) . "%).\n";
+        . "Tax payable: {$m($r['tax_payable'])} (marginal " . (int) round($r['marginal'] * 100) . "%).\n"
+        . (($r['assessment']['spouse_income'] > 0 || $r['assessment']['type'] === 'joint')
+            ? sprintf("Assessment: %s; spouse income %s. Separate total %s vs joint %s; recommended %s.\n",
+                $r['assessment']['type'], $m($r['assessment']['spouse_income']),
+                $m($r['assessment']['separate_total_tax']), $m($r['assessment']['joint_tax']),
+                $r['assessment']['recommended'])
+            : '');
 
     $room = array_values(array_filter($r['relief_rows'], fn ($x) => $x['room'] > 0));
     usort($room, fn ($a, $b) => $b['room'] <=> $a['room']);

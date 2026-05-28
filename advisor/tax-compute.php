@@ -65,6 +65,9 @@ if (is_post()) {
         'rental' => $rental, 'other' => $other,
         'donations' => max(0.0, (float) input('donations', 0)),
         'zakat'     => max(0.0, (float) input('zakat', 0)),
+        'assessment_type' => in_array(input('assessment_type'), ['separate','joint'], true) ? input('assessment_type') : 'separate',
+        'spouse_income'   => max(0.0, (float) input('spouse_income', 0)),
+        'spouse_reliefs'  => max(0.0, (float) input('spouse_reliefs', 0)),
         'reliefs'   => $reliefs,
     ]);
     meter_report('tax');
@@ -148,9 +151,32 @@ require __DIR__ . '/../includes/header.php';
         <tr><td class="muted">Tax per resident graduated schedule</td><td style="text-align:right">RM <?= money($r['gross_tax']) ?></td></tr>
         <?php if ($r['rebate'] > 0): ?><tr><td class="muted">Less: individual rebate (s.6A)</td><td style="text-align:right">−RM <?= money($r['rebate']) ?></td></tr><?php endif; ?>
         <?php if ($r['zakat_applied'] > 0): ?><tr><td class="muted">Less: zakat rebate (s.6A(3))</td><td style="text-align:right">−RM <?= money($r['zakat_applied']) ?></td></tr><?php endif; ?>
-        <tr><td><strong>Tax payable</strong></td><td style="text-align:right"><strong>RM <?= money($r['tax_payable']) ?></strong></td></tr>
+        <tr><td><strong>Tax payable (<?= e($r['assessment']['type']) ?>)</strong></td><td style="text-align:right"><strong>RM <?= money($r['tax_payable']) ?></strong></td></tr>
       </tbody>
     </table>
+    <?php if ($r['assessment']['spouse_income'] > 0 || $r['assessment']['type'] === 'joint'): $as = $r['assessment']; ?>
+      <div class="card-os-body">
+        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+          <strong style="color:var(--navy)">Joint vs separate assessment — comparison</strong>
+          <span class="badge-os <?= $as['recommended']===$as['type']?'b-active':'b-warn' ?>">
+            Recommended: <?= e($as['recommended']) ?><?= $as['saving']>1?' (save ≈ RM '.money($as['saving']).')':'' ?>
+          </span>
+        </div>
+        <table class="table-os" style="margin-bottom:0">
+          <thead><tr><th>Scenario</th><th>Principal chargeable</th><th>Principal tax</th><th>Spouse tax</th><th>Total tax</th></tr></thead>
+          <tbody>
+            <tr><td>Separate</td><td>RM <?= money($as['chargeable_separate']) ?></td>
+              <td>RM <?= money($as['separate_principal_tax']) ?></td>
+              <td>RM <?= money($as['separate_spouse_tax']) ?></td>
+              <td><strong>RM <?= money($as['separate_total_tax']) ?></strong></td></tr>
+            <tr><td>Joint (s.45(2))</td><td>RM <?= money($as['chargeable_joint']) ?></td>
+              <td colspan="2" class="muted">combined on principal</td>
+              <td><strong>RM <?= money($as['joint_tax']) ?></strong></td></tr>
+          </tbody>
+        </table>
+        <p class="muted" style="font-size:12px;margin:8px 0 0">Spouse tax estimate uses spouse income less spouse reliefs (defaulted to self-relief if blank). In joint assessment the principal claims their reliefs only (plus spouse relief if applicable).</p>
+      </div>
+    <?php endif; ?>
     <div class="card-os-body"><div class="disclaimer">Itemised estimate following
       the ITA 1967 sequence, using the system's YA <?= (int) $r['ya'] ?> rates &amp; relief caps.
       Verify classifications (perquisites/BIK, leave passage, s.4(a) vs s.4(d) rental,
@@ -222,6 +248,15 @@ require __DIR__ . '/../includes/header.php';
             <input type="number" step="0.01" name="donations" value="<?= e($in['donations']) ?>"></div>
           <div class="form-row"><label>Zakat paid (RM) — rebate against tax payable (s.6A(3))</label>
             <input type="number" step="0.01" name="zakat" value="<?= e($in['zakat'] ?? 0) ?>"></div>
+          <div class="form-row"><label>Assessment type</label>
+            <select name="assessment_type">
+              <option value="separate" <?= ($in['assessment_type'] ?? 'separate')==='separate'?'selected':'' ?>>Separate (each spouse files own)</option>
+              <option value="joint" <?= ($in['assessment_type'] ?? '')==='joint'?'selected':'' ?>>Joint — s.45(2) election</option>
+            </select></div>
+          <div class="form-row"><label>Spouse total income (RM) — for joint / comparison</label>
+            <input type="number" step="0.01" name="spouse_income" value="<?= e($in['spouse_income'] ?? 0) ?>"></div>
+          <div class="form-row"><label>Spouse reliefs (RM) — defaults to self-relief if blank</label>
+            <input type="number" step="0.01" name="spouse_reliefs" value="<?= e($in['spouse_reliefs'] ?? 0) ?>" placeholder="0 = use self-relief"></div>
         </div>
       </div>
     </div>

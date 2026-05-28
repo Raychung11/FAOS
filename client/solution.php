@@ -100,6 +100,11 @@ if ($key === 'tax' && taxcomp_exists((int) $c['id'])):
     if (($r['zakat'] ?? 0) > 0) {
         $assumptions[] = 'Zakat rebate claimed — assumes a valid receipt from an authorised collection centre (PPZ or state-equivalent).';
     }
+    if (($r['assessment']['type'] ?? 'separate') === 'joint') {
+        $assumptions[] = 'Joint assessment elected under s.45(2) — spouse\'s total income is combined with the principal; spouse\'s individual reliefs are not transferred.';
+    } elseif (($r['assessment']['spouse_income'] ?? 0) > 0) {
+        $assumptions[] = 'Spouse has income; assessment is separate and a joint-vs-separate comparison is shown.';
+    }
 ?>
 <div class="rep">
 
@@ -253,6 +258,29 @@ if ($key === 'tax' && taxcomp_exists((int) $c['id'])):
     <?php if (($r['zakat_applied'] ?? 0) > 0): ?><tr><td>Less: zakat rebate (s.6A(3))</td><td class="tnum">(<?= money($r['zakat_applied']) ?>)</td></tr><?php endif; ?>
     <tr><td><strong>Estimated tax payable</strong></td><td class="tnum"><strong>RM <?= money($r['tax_payable']) ?></strong></td></tr>
   </tbody></table>
+  <?php if ($r['assessment']['spouse_income'] > 0 || $r['assessment']['type'] === 'joint'): $as = $r['assessment']; ?>
+  <h3>Assessment — joint vs separate</h3>
+  <table class="table-os">
+    <thead><tr><th>Scenario</th><th class="tnum">Principal tax</th><th class="tnum">Spouse tax</th><th class="tnum">Total tax</th></tr></thead>
+    <tbody>
+      <tr><td>Separate filing</td>
+        <td class="tnum"><?= money($as['separate_principal_tax']) ?></td>
+        <td class="tnum"><?= money($as['separate_spouse_tax']) ?></td>
+        <td class="tnum"><strong><?= money($as['separate_total_tax']) ?></strong></td></tr>
+      <tr><td>Joint (s.45(2)) — combined on principal</td>
+        <td class="tnum">—</td><td class="tnum">—</td>
+        <td class="tnum"><strong><?= money($as['joint_tax']) ?></strong></td></tr>
+      <tr><td><strong>Recommended election</strong></td>
+        <td colspan="2"><?= ucfirst($as['recommended']) ?></td>
+        <td class="tnum">save ≈ <strong style="color:var(--ok)">RM <?= money($as['saving']) ?></strong></td></tr>
+    </tbody>
+  </table>
+  <p class="muted" style="font-size:12.5px;margin:0 0 6px">
+    Spouse-tax estimate uses spouse income less spouse reliefs (defaulted to the self-relief amount when blank).
+    In a joint assessment, the principal claims their own reliefs only, plus the spouse relief (s.47) if eligible.
+  </p>
+  <?php endif; ?>
+
   <p style="margin-top:10px"><strong>Conclusion (Part A).</strong> Your estimated Malaysian income
     tax payable for YA <?= (int) $r['ya'] ?> is <strong>RM <?= money($r['tax_payable']) ?></strong>,
     at an effective rate of <?= round($r['eff_rate'] * 100, 1) ?>%.

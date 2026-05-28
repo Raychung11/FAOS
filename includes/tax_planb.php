@@ -132,6 +132,11 @@ function tax_planb_build(array $r, array $eng = [], array $aiCommentary = []): a
     if ($hasChildren) {
         $famTips[] = 'Review the will, guardianship and EPF/insurance nominations after material life events; ensure beneficiaries are current.';
     }
+    if (!empty($r['assessment']) && ($r['assessment']['spouse_income'] > 0 || $r['assessment']['type'] === 'joint')) {
+        $as = $r['assessment'];
+        $famTips[] = sprintf('Assessment review — recommended election is %s (saving ≈ RM %s vs the other option). Re-test each year as incomes / reliefs change.',
+            $as['recommended'], money($as['saving']));
+    }
     $famTips[] = 'Review asset ownership and succession arrangements for the business and rental properties.';
     $sections['family'] = ['title' => TAX_PLANB_SECTIONS['family'],
                            'type' => 'bullets', 'items' => $famTips];
