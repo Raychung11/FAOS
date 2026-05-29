@@ -85,6 +85,37 @@ try {
             'owner'      => 'Demo Advisor',
         ]])]);
         $out(' Seeded Tax Planning engagement for the demo client.');
+
+        // Itemised computation for Sarah — so the client portal shows the
+        // document-style report instead of the simpler before/after card.
+        $up->execute([$tenantId, 'taxcomp:' . $cid, json_encode([
+            'employment' => [
+                ['label' => 'Annual gross salary (TechWorks Sdn Bhd)',  'amount' => 168000, 'exempt' => 0],
+                ['label' => "Director's fee (Lim Trading Sdn Bhd)",    'amount' => 30000,  'exempt' => 0],
+            ],
+            'businesses' => [],
+            'rental'     => [],
+            'other'      => [],
+            'donations'  => 0,
+            'zakat'      => 0,
+            'assessment_type' => 'separate',
+            'spouse_income'   => 80000,    // David's est. income — drives joint-vs-separate comparison
+            'spouse_reliefs'  => 0,         // 0 = use self-relief default
+            'reliefs' => [
+                'children_u18'      => 2, 'children_tertiary' => 0,
+                'disabled_u18'      => 0, 'disabled_tertiary' => 0,
+                'r_epf'             => 21780, // ~11% mandatory; engine caps to RM4,000
+                'r_life'            => 3000,
+                'r_medins'          => 4000,
+                'r_lifestyle'       => 2500,
+                'r_sspn'            => 4000,  // contributed half of the RM8k cap (room shown)
+                'r_socso'           => 350,
+                'r_childcare'       => 3000,  // youngest child age 6
+                'r_prs'             => 0,     // unused — surfaces as a top-up opportunity
+            ],
+            'updated_at' => date('Y-m-d H:i'),
+        ])]);
+        $out(' Seeded itemised tax computation for Sarah Lim.');
     };
 
     // Worked-example client "Mr Tan" — the full itemised tax case study.
