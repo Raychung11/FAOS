@@ -89,6 +89,21 @@ try {
 
     // Worked-example client "Mr Tan" — the full itemised tax case study.
     $seedTaxCaseStudy = static function () use ($pdo, $tenantId, $advisorId, $creator, $out): void {
+        // Ensure a portal-user login for Mr Tan, so the client portal can view his report.
+        $clientRoleId = (int) $pdo->query("SELECT id FROM roles WHERE code='client'")->fetchColumn();
+        $portalEmail  = 'mrtan@demo-advisory.test';
+        $u = $pdo->prepare('SELECT id FROM users WHERE email=? AND deleted_at IS NULL');
+        $u->execute([$portalEmail]);
+        $portalUserId = (int) $u->fetchColumn();
+        if (!$portalUserId) {
+            $pdo->prepare(
+                'INSERT INTO users (tenant_id,role_id,name,email,password_hash,status,created_by)
+                 VALUES (?,?,?,?,?,"active",?)'
+            )->execute([$tenantId, $clientRoleId, 'Mr Tan (Demo Client)',
+                $portalEmail, password_hash('Admin@12345', PASSWORD_DEFAULT), $creator]);
+            $portalUserId = (int) $pdo->lastInsertId();
+        }
+
         $ex = $pdo->prepare("SELECT id FROM clients WHERE tenant_id=? AND nric_passport='DEMO-CLIENT-TAN'");
         $ex->execute([$tenantId]);
         $tanId = (int) $ex->fetchColumn();
@@ -96,13 +111,17 @@ try {
             $pdo->prepare(
                 'INSERT INTO clients
                   (tenant_id,full_name,nric_passport,marital_status,occupation,industry,
-                   dependents,risk_appetite,financial_goals,advisor_id,status,created_by)
-                 VALUES (?,?,?,?,?,?,?,?,?,?,"active",?)'
+                   dependents,risk_appetite,financial_goals,advisor_id,portal_user_id,status,created_by)
+                 VALUES (?,?,?,?,?,?,?,?,?,?,?,"active",?)'
             )->execute([$tenantId,'Mr Tan (Tax Case Study)','DEMO-CLIENT-TAN','divorced',
                 'Director / Consultant','Professional services',3,'balanced',
                 'Minimise tax across employment, three businesses and rental; provide for a disabled child.',
-                $advisorId,$creator]);
+                $advisorId,$portalUserId,$creator]);
             $tanId = (int) $pdo->lastInsertId();
+        } else {
+            // Existing demo client created before portal-user wiring — attach the link now.
+            $pdo->prepare('UPDATE clients SET portal_user_id=? WHERE id=? AND tenant_id=? AND portal_user_id IS NULL')
+                ->execute([$portalUserId, $tanId, $tenantId]);
         }
         $up = $pdo->prepare(
             'INSERT INTO settings (tenant_id,setting_key,setting_value) VALUES (?,?,?)
