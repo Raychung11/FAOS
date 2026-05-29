@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAOS BOS — Executive Summary</title>
+<style>
+  :root{--ink:#0f172a;--mute:#475569;--pri:#2563eb;--pri-d:#1e3a8a;--line:#cbd5e1;--soft:#f1f5f9;--ok:#16a34a}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);font-size:10.5px;line-height:1.45;background:#fff;padding:16px}
+  .sheet{max-width:870px;margin:0 auto}
+  .top{display:flex;gap:18px;align-items:flex-end;justify-content:space-between;padding-bottom:10px;margin-bottom:12px;background:linear-gradient(135deg,#2563eb,#1e3a8a);color:#fff;border-radius:10px;padding:14px 18px}
+  .top .brand{font-weight:800;font-size:17px;letter-spacing:-.01em}
+  .top .brand small{display:block;font-size:10.5px;font-weight:500;opacity:.9;margin-top:2px}
+  .top .meta{text-align:right;font-size:10px;opacity:.92}
+  .top .meta b{color:#fff}
+  .print-btn{background:#fff;color:var(--pri);border:none;border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-bottom:6px}
+
+  h2{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.6px;color:var(--pri);margin:8px 0 5px}
+  .lead{font-size:11px;color:var(--mute);margin-bottom:6px}
+  .lead b{color:var(--ink)}
+
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:6px 0 10px}
+  .stat{background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:6px 8px;text-align:center}
+  .stat .v{font-size:14px;font-weight:800;color:var(--pri);line-height:1.1}
+  .stat .l{font-size:8.5px;color:var(--mute);margin-top:2px;text-transform:uppercase;letter-spacing:.3px}
+
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+  .cap{border:1px solid var(--line);border-radius:7px;padding:6px 8px}
+  .cap .t{font-weight:700;font-size:10px;color:var(--ink);margin-bottom:2px}
+  .cap .d{color:var(--mute);font-size:9.5px;line-height:1.4}
+  .cap .ic{font-size:14px;margin-right:4px}
+
+  .flow{margin-top:8px;background:var(--soft);border:1px solid var(--line);border-radius:7px;padding:7px 10px}
+  .flow .row{display:flex;flex-wrap:wrap;gap:5px;align-items:center;justify-content:space-between}
+  .flow .step{font-size:10px;font-weight:700;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:999px;padding:3px 9px}
+  .flow .arr{color:var(--pri);font-weight:700}
+
+  .col2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px}
+  .why{border-left:3px solid var(--pri);padding:4px 0 4px 9px}
+  .why ul{list-style:none}
+  .why li{font-size:10px;color:var(--ink);padding:2px 0}
+  .why li b{color:var(--ink)}
+  .why li:before{content:"▸ ";color:var(--pri);font-weight:700}
+
+  .status{border:1px dashed var(--line);border-radius:7px;padding:7px 9px;background:#fff}
+  .status .row{display:flex;gap:6px;margin-top:3px}
+  .status .pill{font-size:9px;background:#dcfce7;color:#166534;border-radius:999px;padding:2px 8px;font-weight:700}
+  .status .next{font-size:9.5px;color:var(--mute);margin-top:4px}
+
+  .foot{margin-top:10px;display:flex;justify-content:space-between;align-items:center;border-top:1px solid var(--line);padding-top:6px;font-size:9px;color:#94a3b8}
+
+  @media print{
+    body{padding:0;font-size:9.8px}
+    .print-btn{display:none}
+    @page{size:A4;margin:10mm}
+    .grid,.col2,.flow,.cap,.status{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+
+  <div class="top">
+    <div>
+      <div class="brand">FAOS BOS — Executive Summary
+        <small>AI Central Kitchen + QR Kiosk Sales BOS · for Malaysian F&amp;B operators</small>
+      </div>
+    </div>
+    <div>
+      <button class="print-btn" onclick="window.print()">🖨 Print / Save PDF</button>
+      <div class="meta">
+        Caffeinees Palace Sdn Bhd<br>
+        Live demo: <b>skyblue-stork-968585.hostingersite.com</b><br>
+        <span style="opacity:.85">Prepared <?php $d = ''; ?><span id="d"></span></span>
+      </div>
+    </div>
+  </div>
+
+  <h2>The problem</h2>
+  <p class="lead">F&amp;B chains that run kiosks inside hypermarkets <b>don't own the POS</b>. The official sales report arrives <b>3–4 weeks late</b>; card settlements land in batches <b>net of MDR</b>; SST and LHDN MyInvois compliance can't wait for spreadsheets. Operations, finance and tax need one system that estimates revenue in real time and reconciles the truth when it eventually arrives.</p>
+
+  <div class="stats">
+    <div class="stat"><div class="v">3–4 wk</div><div class="l">Hypermarket lag handled</div></div>
+    <div class="stat"><div class="v">&lt; 5 s</div><div class="l">Per QR sale at the kiosk</div></div>
+    <div class="stat"><div class="v">57</div><div class="l">Tables · 14 modules</div></div>
+    <div class="stat"><div class="v">220+</div><div class="l">Auto tests · CI green</div></div>
+    <div class="stat"><div class="v">100 %</div><div class="l">Self-hosted · zero CDN</div></div>
+  </div>
+
+  <h2>What it does</h2>
+  <div class="grid">
+    <div class="cap"><div class="t"><span class="ic">📷</span>Real-time QR Sales</div><div class="d">Phone-camera scan (iOS + Android), automatic stock deduction, recipe-aware consumption, offline-safe queue.</div></div>
+    <div class="cap"><div class="t"><span class="ic">📦</span>QR Stock Control</div><div class="d">Receive, transfer, consume, wastage, count — every movement traceable from supplier to sale, FEFO-aware.</div></div>
+    <div class="cap"><div class="t"><span class="ic">🍳</span>Central Kitchen Production</div><div class="d">Recipe / BOM production orders with moving-average cost on the produced output.</div></div>
+    <div class="cap"><div class="t"><span class="ic">🚚</span>Procurement → AP</div><div class="d">PO → approve → GRN with batch/expiry → auto-raised supplier invoice (NET 30). CSV bulk PO import.</div></div>
+    <div class="cap"><div class="t"><span class="ic">📊</span>Multi-outlet &amp; AI Dashboards</div><div class="d">Worker / outlet / HQ / AI dashboards · forecasting · low-stock + expiry alerts · purchase recommendations.</div></div>
+    <div class="cap"><div class="t"><span class="ic">🔁</span>Dual Reconciliation</div><div class="d">QR sales vs delayed hypermarket report · card-terminal vs bank statement with MDR-fee tolerance.</div></div>
+    <div class="cap"><div class="t"><span class="ic">💰</span>Operational Finance</div><div class="d">Accounts Payable + Accounts Receivable, P&amp;L (revenue / COGS / gross profit), inventory valuation.</div></div>
+    <div class="cap"><div class="t"><span class="ic">🧾</span>SST + LHDN e-Invoice</div><div class="d">Service Tax 6 % split on every sale; per-sale (B2B) and consolidated B2C e-invoice with validation QR.</div></div>
+    <div class="cap"><div class="t"><span class="ic">↩️</span>Sales Corrections</div><div class="d">Discounts, voids and refunds with stock reversal; flow into P&amp;L and SST; manager-only (fraud control).</div></div>
+    <div class="cap"><div class="t"><span class="ic">🔒</span>Period Close</div><div class="d">Closed accounting periods reject backdated activity; reopen if a fix is genuinely needed.</div></div>
+    <div class="cap"><div class="t"><span class="ic">👥</span>Roles &amp; RBAC</div><div class="d">Super-admin, HQ, outlet &amp; restaurant manager, accountant, worker — every action audit-logged.</div></div>
+    <div class="cap"><div class="t"><span class="ic">⬆️</span>Bulk Import</div><div class="d">Catalogue, opening stock, and supplier POs via CSV — onboard fast in the initial stage.</div></div>
+  </div>
+
+  <h2>Daily operating flow</h2>
+  <div class="flow"><div class="row">
+    <span class="step">Buy</span><span class="arr">→</span>
+    <span class="step">Produce (CK)</span><span class="arr">→</span>
+    <span class="step">Distribute</span><span class="arr">→</span>
+    <span class="step">QR Sell</span><span class="arr">→</span>
+    <span class="step">Reconcile (sales + bank)</span><span class="arr">→</span>
+    <span class="step">Account (AP/AR/P&amp;L)</span><span class="arr">→</span>
+    <span class="step">e-Invoice</span><span class="arr">→</span>
+    <span class="step">Close period</span>
+  </div></div>
+
+  <div class="col2">
+    <div>
+      <h2>Why it matters</h2>
+      <div class="why"><ul>
+        <li><b>Replaces POS dependency</b> — sales captured by QR scan in real time, no hypermarket till required.</li>
+        <li><b>Malaysian-native</b> — SST 6 % + LHDN MyInvois UBL JSON out of the box, ready for live submission.</li>
+        <li><b>Built for kiosk reality</b> — works offline (queue + idempotent sync), iOS &amp; Android camera scan via jsQR.</li>
+        <li><b>Self-hosted on Hostinger</b> — pure PHP 8 + MySQL 8, zero external runtime dependencies, low operating cost.</li>
+        <li><b>Tamper-evident</b> — full audit log on every change, period close protects monthly figures.</li>
+      </ul></div>
+    </div>
+    <div>
+      <h2>Status &amp; next steps</h2>
+      <div class="status">
+        <div><b>Production-ready</b> · live demo deployed · CI green at every push</div>
+        <div class="row">
+          <span class="pill">✓ Procurement → AP</span>
+          <span class="pill">✓ QR sales</span>
+          <span class="pill">✓ Recon (×2)</span>
+          <span class="pill">✓ Finance + e-Invoice</span>
+        </div>
+        <div class="next"><b>Optional next:</b> flip on live LHDN MyInvois submission · enable AI forecast provider · migrate the real catalogue + opening balances · per-batch FEFO valuation · PWA offline shell.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <div>FAOS BOS · © <span id="y"></span> Caffeinees Palace Sdn Bhd · Built in Malaysia</div>
+    <div>Full docs: <code>docs/ARCHITECTURE.md</code> · <code>docs/ACCOUNTANT_GUIDE.md</code></div>
+  </div>
+</div>
+<script>
+  document.getElementById('y').textContent = new Date().getFullYear();
+  document.getElementById('d').textContent = new Date().toLocaleDateString('en-MY', {year:'numeric',month:'short',day:'numeric'});
+</script>
+</body>
+</html>
