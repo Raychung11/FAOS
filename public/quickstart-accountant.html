@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>FAOS BOS — Accountant Quick‑Start</title>
+<style>
+  :root{--ink:#0f172a;--mute:#475569;--pri:#2563eb;--line:#cbd5e1;--soft:#f1f5f9}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;color:var(--ink);font-size:10.5px;line-height:1.4;background:#fff;padding:16px}
+  .sheet{max-width:850px;margin:0 auto}
+  .top{display:flex;align-items:flex-end;justify-content:space-between;border-bottom:2px solid var(--pri);padding-bottom:8px;margin-bottom:10px}
+  h1{font-size:18px;font-weight:800;letter-spacing:-.01em}
+  h1 small{display:block;font-size:10.5px;font-weight:500;color:var(--mute)}
+  .login{font-size:10.5px;text-align:right;color:var(--mute)}
+  .login b{color:var(--ink)}
+  .print-btn{background:var(--pri);color:#fff;border:none;border-radius:7px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer}
+  .menu{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .menu span{background:var(--soft);border:1px solid var(--line);border-radius:999px;padding:3px 9px;font-size:9.5px;font-weight:600}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .card{border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+  .card .t{font-weight:700;font-size:11px;margin-bottom:2px;color:var(--pri)}
+  .card .w{color:var(--mute);font-size:9px;text-transform:uppercase;letter-spacing:.3px;margin-bottom:3px}
+  .card p{font-size:10px}
+  .card .chk{color:#16a34a;font-size:9.5px;margin-top:3px}
+  .notes{margin-top:10px;border-top:1px dashed var(--line);padding-top:8px}
+  .notes b{color:var(--ink)}
+  .notes ul{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:2px 18px}
+  .notes li{font-size:9.5px;color:var(--mute);padding-left:12px;position:relative}
+  .notes li:before{content:"•";position:absolute;left:2px;color:var(--pri)}
+  .foot{margin-top:8px;font-size:8.5px;color:#94a3b8;text-align:center}
+  @media print{
+    body{padding:0;font-size:9.6px}
+    .print-btn{display:none}
+    @page{size:A4;margin:11mm}
+    .card{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <div class="top">
+    <div>
+      <h1>FAOS BOS — Accountant Quick‑Start<small>Finance · Tax · Reconciliations · Reports</small></h1>
+    </div>
+    <div>
+      <button class="print-btn" onclick="window.print()">🖨 Print</button>
+      <div class="login" style="margin-top:6px">
+        Sign in: <b>skyblue-stork-968585.hostingersite.com</b><br>
+        User <b>acc</b> · Password <b>acc123</b> (change after first login)
+      </div>
+    </div>
+  </div>
+
+  <div class="menu">
+    <span>Finance</span><span>e‑Invoicing</span><span>Bank Reconciliation</span>
+    <span>Reconciliation</span><span>Reports</span>
+  </div>
+
+  <div class="grid">
+    <div class="card"><div class="t">1 · Profit &amp; Loss</div><div class="w">Finance ▸ P&amp;L</div>
+      <p>Set <b>From/To</b> → <b>Apply</b>. Read Gross sales, Refunds, Revenue, COGS, Gross profit, Margin, Wastage. <b>Print/PDF</b> + <b>CSV</b>.</p>
+      <div class="chk">✓ Revenue = Gross sales − Refunds (COGS at moving‑avg cost)</div></div>
+
+    <div class="card"><div class="t">2 · Pay supplier (AP)</div><div class="w">Finance ▸ Payables</div>
+      <p>Add a supplier invoice (no, date, due, total) → it shows <b>unpaid + aging</b> → <b>Pay</b>. GRN invoices appear here automatically.</p>
+      <div class="chk">✓ Overpayment is rejected</div></div>
+
+    <div class="card"><div class="t">3 · Receive from hypermarket (AR)</div><div class="w">Finance ▸ Receivables</div>
+      <p>Rows appear automatically after a report import. Click <b>Receive</b>, enter amount → partial → <b>settled</b>.</p>
+      <div class="chk">✓ Outstanding = Expected − Received</div></div>
+
+    <div class="card"><div class="t">4 · Inventory value</div><div class="w">Finance ▸ Stock Value</div>
+      <p>On‑hand at moving‑average cost, with total. <b>Red rows = negative stock</b> — flag to the manager for a stock‑take.</p></div>
+
+    <div class="card"><div class="t">5 · Close the month</div><div class="w">Finance ▸ Periods</div>
+      <p>Pick last month → <b>Close period</b>. Backdated sales/voids/refunds are then blocked. <b>Reopen</b> if a fix is needed.</p>
+      <div class="chk">✓ Hypermarket report imports are NOT blocked (arrive late)</div></div>
+
+    <div class="card"><div class="t">6 · Hypermarket reconcile</div><div class="w">Reconciliation</div>
+      <p>Import official report: outlet, period, lines <code>SKU,qty,amount</code> → <b>Import &amp; Reconcile</b>. Variance per line.</p>
+      <div class="chk">✓ matched / shortage / over / under / missing scans</div></div>
+
+    <div class="card"><div class="t">7 · Bank reconcile</div><div class="w">Bank Reconciliation</div>
+      <p>Upload <b>terminal CSV</b> + <b>bank CSV</b> (map columns) → <b>Run</b>. Work the <b>Exceptions</b> list.</p>
+      <div class="chk">✓ matched / fee_variance (MDR) / short / over / unmatched</div></div>
+
+    <div class="card"><div class="t">8 · SST‑02 figure</div><div class="w">e‑Invoicing ▸ SST Summary</div>
+      <p>Pick a period → <b>output tax</b> by code (Service Tax 6%), net of refunds.</p></div>
+
+    <div class="card"><div class="t">9 · e‑Invoice (MyInvois)</div><div class="w">e‑Invoicing</div>
+      <p><b>Consolidated</b> = monthly B2C roll‑up (outlet + month). <b>Per‑sale</b> = enter txn ID (+ buyer TIN for B2B). <b>Print</b> tax invoice w/ QR.</p>
+      <div class="chk">✓ pending_submission until MyInvois keys set (doc still generated)</div></div>
+
+    <div class="card"><div class="t">10 · Reports</div><div class="w">Reports</div>
+      <p>Pick report + date range + <b>Group by</b> (outlet/kiosk/worker/SKU/category) → <b>Run</b> → <b>CSV</b>.</p></div>
+  </div>
+
+  <div class="notes">
+    <ul>
+      <li><b>Prices are tax‑inclusive</b> — 6% SST is split out automatically</li>
+      <li><b>Figure looks off?</b> Check the date range first</li>
+      <li><b>Refunds &amp; voids</b> are done by managers (flow into your P&amp;L/SST)</li>
+      <li><b>Page won't load?</b> Press Ctrl+F5 (hard refresh)</li>
+      <li>Every action is <b>audit‑logged</b> (who &amp; when)</li>
+      <li><b>This is test data</b> — real data is loaded at go‑live</li>
+    </ul>
+  </div>
+
+  <div class="foot">FAOS BOS · Caffeinees Palace Sdn Bhd · full guide: docs/ACCOUNTANT_GUIDE.md</div>
+</div>
+</body>
+</html>

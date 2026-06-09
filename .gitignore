@@ -1,0 +1,21 @@
+# Environment / secrets
+.env
+*.local
+
+# PHP
+vendor/
+composer.lock
+
+# Runtime
+storage/cache/*
+storage/logs/*
+storage/uploads/*
+storage/qr/*
+!storage/**/.gitkeep
+
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

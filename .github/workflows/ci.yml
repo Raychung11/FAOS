@@ -1,0 +1,110 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+# One run per ref; cancel superseded runs (e.g. rapid pushes to a PR).
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: PHP lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, gd, mbstring, intl, curl, zip, sodium
+          tools: none
+      - name: php -l (all sources)
+        run: |
+          find app bin tests public server.php -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l
+
+  e2e:
+    name: Migrate + e2e regression
+    runs-on: ubuntu-latest
+    needs: lint
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: faos_bos
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASS: root
+      DB_NAME: faos_bos
+      BASE_URL: http://127.0.0.1:8080
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: pdo_mysql, gd, mbstring, intl, curl, zip, sodium
+          tools: none
+
+      - name: Install MySQL client
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq default-mysql-client
+
+      - name: Configure .env
+        run: |
+          cp .env.example .env
+          sed -i "s|^APP_URL=.*|APP_URL=http://127.0.0.1:8080|" .env
+          sed -i "s|^APP_DEBUG=.*|APP_DEBUG=true|" .env
+          sed -i "s|^APP_KEY=.*|APP_KEY=ci-test-key-0123456789abcdef0123|" .env
+          sed -i "s|^DB_HOST=.*|DB_HOST=127.0.0.1|" .env
+          sed -i "s|^DB_PORT=.*|DB_PORT=3306|" .env
+          sed -i "s|^DB_USER=.*|DB_USER=root|" .env
+          sed -i "s|^DB_PASS=.*|DB_PASS=root|" .env
+          sed -i "s|^DB_NAME=.*|DB_NAME=faos_bos|" .env
+
+      - name: Wait for MySQL
+        run: |
+          for i in $(seq 1 30); do
+            if mysqladmin ping -h 127.0.0.1 -uroot -proot --silent; then exit 0; fi
+            sleep 2
+          done
+          echo "MySQL did not become ready"; exit 1
+
+      - name: Run migrations + seed
+        run: php bin/migrate.php --seed
+
+      - name: Migration idempotency (re-run is a no-op)
+        run: |
+          OUT=$(php bin/migrate.php --seed)
+          echo "$OUT"
+          echo "$OUT" | grep -q "No pending migrations"
+
+      - name: Start app server
+        run: |
+          php -S 127.0.0.1:8080 server.php > /tmp/server.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://127.0.0.1:8080/login && break
+            sleep 1
+          done
+
+      - name: QR encoder unit test
+        run: php tests/qr_test.php
+
+      - name: End-to-end regression
+        run: bash tests/e2e/run_all.sh
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -n 100 /tmp/server.log || true
