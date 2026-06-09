@@ -1,12 +1,14 @@
-<div class="card mb"><div class="bd row">
-  <div><label>From</label><input id="from" type="date"></div>
-  <div><label>To</label><input id="to" type="date"></div>
-  <div style="display:flex;align-items:flex-end;gap:8px">
-    <button class="btn" id="run">Apply</button>
-    <button class="btn gray" id="pdf">Print / PDF</button>
-    <button class="btn gray" id="csv">CSV</button>
+<div class="card mb"><div class="bd">
+  <div class="row">
+    <div><label>From</label><input id="from" type="date"></div>
+    <div><label>To</label><input id="to" type="date"></div>
+    <div style="display:flex;align-items:flex-end;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="run">Apply</button>
+      <button class="btn gray" id="pdf">Print / PDF</button>
+      <button class="btn gray" id="csv">CSV</button>
+    </div>
   </div>
-  <div style="display:flex;align-items:flex-end;gap:6px;margin-left:auto">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:14px;border-top:1px solid var(--border);padding-top:12px">
     <button class="btn ghost tab" data-tab="pnl">P&amp;L</button>
     <button class="btn ghost tab" data-tab="ap">Payables</button>
     <button class="btn ghost tab" data-tab="ar">Receivables</button>

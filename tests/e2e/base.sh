@@ -58,7 +58,7 @@ ckc "$(curl -s -b /tmp/cj_a.txt $B/api/dashboard/hq)" '"outlet_rank"' "HQ dashbo
 ckc "$(curl -s -b /tmp/cj_a.txt $B/api/dashboard/ai)" '"forecast"' "AI dashboard"
 ckc "$(curl -s -b /tmp/cj_a.txt "$B/api/reports/sales?by=sku")" '"per_thousand"' "sales report per-thousand"
 ckc "$(curl -s -b /tmp/cj_a.txt -w '%{content_type}' -o /dev/null "$B/api/reports/sales?by=outlet&export=csv")" "text/csv" "CSV export"
-ckc "$(curl -s -b /tmp/cj_a.txt $AH -X POST $B/api/reconciliation/import -d '{"outlet_id":1,"period_start":"2026-05-01","period_end":"2026-05-31","source_name":"AEON","lines":[{"sku":"CF-LATTE","qty":5,"amount":49.5}]}')" '"variance"' "reconciliation import+variance"
+ckc "$(curl -s -b /tmp/cj_a.txt $AH -X POST $B/api/reconciliation/import -d '{"outlet_id":1,"period_start":"'$CURMONTH_START'","period_end":"'$CURMONTH_END'","source_name":"AEON","lines":[{"sku":"CF-LATTE","qty":5,"amount":49.5}]}')" '"variance"' "reconciliation import+variance"
 ckc "$(curl -s -b /tmp/cj_a.txt "$B/api/reconciliation/variance")" 'under_reported' "variance classified under_reported"
 
 ck "$(curl -s -b /tmp/cj_a.txt -o /dev/null -w '%{http_code}' -X POST $B/api/md/products -H 'Content-Type:application/json' -H 'Accept:application/json' -d '{"sku":"X"}')" "419" "CSRF enforced on POST"

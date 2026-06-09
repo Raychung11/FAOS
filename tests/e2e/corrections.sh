@@ -45,12 +45,12 @@ ckc "$(curl -s -b /tmp/cor_m.txt $MH -X POST $B/api/sales/$TC/refund -d "{\"item
 
 # --- Accountant: P&L nets refunds, excludes voided ---
 A=$(login /tmp/cor_a.txt acc acc123)
-PNL=$(curl -s -b /tmp/cor_a.txt "$B/api/finance/summary?from=2026-05-01&to=2026-12-31")
+PNL=$(curl -s -b /tmp/cor_a.txt "$B/api/finance/summary?from=${CURMONTH_START}&to=${CURMONTH_END}")
 ck "$(echo "$PNL" | grep -oP '"gross_sales":\K[0-9.]+')" "47.52" "gross_sales excludes voided B (17.82+29.70)"
 ck "$(echo "$PNL" | grep -oP '"refunds":\K[0-9.]+')" "9.9" "refunds total = 9.90"
 ck "$(echo "$PNL" | grep -oP '"revenue":\K[0-9.]+')" "37.62" "revenue = gross - refunds"
 
-SST=$(curl -s -b /tmp/cor_a.txt "$B/api/finance/sst-summary?from=2026-05-01&to=2026-12-31")
+SST=$(curl -s -b /tmp/cor_a.txt "$B/api/finance/sst-summary?from=${CURMONTH_START}&to=${CURMONTH_END}")
 ck "$(echo "$SST" | grep -oP '"gross_output_tax":\K[0-9.]+')" "2.69" "gross SST excludes voided (1.01+1.68)"
 ck "$(echo "$SST" | grep -oP '"refund_tax":\K[0-9.]+')" "0.56" "refund tax netted"
 ck "$(echo "$SST" | grep -oP '"total_output_tax":\K[0-9.]+')" "2.13" "net output tax = 2.69 - 0.56"

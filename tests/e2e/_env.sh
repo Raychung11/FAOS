@@ -17,6 +17,15 @@ DB_USER="${DB_USER:-$(_envval DB_USER)}"; DB_USER="${DB_USER:-faos}"
 DB_PASS="${DB_PASS:-$(_envval DB_PASS)}"; DB_PASS="${DB_PASS:-secret}"
 DB_NAME="${DB_NAME:-$(_envval DB_NAME)}"; DB_NAME="${DB_NAME:-faos_bos}"
 
+# Current-month bracket so suites stay green regardless of when CI runs.
+# Reconciliation imports / P&L date ranges must always contain "today's"
+# demo sales.
+CURMONTH_START=$(date +%Y-%m-01)
+CURMONTH_END=$(date -d "$CURMONTH_START +1 month -1 day" +%Y-%m-%d)
+PREVMONTH_START=$(date -d "$CURMONTH_START -1 month" +%Y-%m-01)
+PREVMONTH_END=$(date -d "$CURMONTH_START -1 day" +%Y-%m-%d)
+PREVMONTH_MID=$(date -d "$PREVMONTH_START +9 days" +%Y-%m-%d)
+
 PASS=0; FAIL=0
 
 dbq() { MYSQL_PWD="$DB_PASS" mysql -h "$DB_HOST" -P "$DB_PORT" -u "$DB_USER" -N -e "$1" "$DB_NAME"; }

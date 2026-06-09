@@ -20,7 +20,7 @@ AC=$(login /tmp/ac.txt acc acc123); ACSRF=$(echo "$AC" | grep -oP '"csrf":"\K[^"
 ckc "$AC" '"role":"accountant"' "accountant login"
 AH="-H Content-Type:application/json -H X-CSRF-Token:$ACSRF -H Accept:application/json"
 
-PNL=$(curl -s -b /tmp/ac.txt "$B/api/finance/summary?from=2026-05-01&to=2026-05-31")
+PNL=$(curl -s -b /tmp/ac.txt "$B/api/finance/summary?from=${CURMONTH_START}&to=${CURMONTH_END}")
 ckc "$PNL" '"gross_profit"' "P&L summary returns"
 REV=$(echo "$PNL" | grep -oP '"revenue":\K[0-9.]+')
 awk "BEGIN{exit !($REV>0)}" && { echo "  PASS  P&L revenue > 0 ($REV)"; PASS=$((PASS+1)); } || { echo "  FAIL  P&L revenue ($REV)"; FAIL=$((FAIL+1)); }
@@ -40,8 +40,8 @@ ckc "$(curl -s -b /tmp/ac.txt $AH -X POST $B/api/finance/payables/$IID/pay -d '{
 ckc "$(curl -s -b /tmp/ac.txt $B/api/finance/payables)" '"status":"paid"' "invoice marked paid"
 ckc "$(curl -s -b /tmp/ac.txt $AH -X POST $B/api/finance/payables/$IID/pay -d '{"amount":50}')" 'exceeds outstanding' "overpayment rejected"
 
-ckc "$(curl -s -b /tmp/ac.txt "$B/api/finance/statement?from=2026-05-01&to=2026-05-31")" 'Profit &amp; Loss' "printable P&L statement"
-ckc "$(curl -s -b /tmp/ac.txt -o /dev/null -w '%{content_type}' "$B/api/finance/statement?export=csv&from=2026-05-01&to=2026-05-31")" "text/csv" "P&L CSV export"
+ckc "$(curl -s -b /tmp/ac.txt "$B/api/finance/statement?from=${CURMONTH_START}&to=${CURMONTH_END}")" 'Profit &amp; Loss' "printable P&L statement"
+ckc "$(curl -s -b /tmp/ac.txt -o /dev/null -w '%{content_type}' "$B/api/finance/statement?export=csv&from=${CURMONTH_START}&to=${CURMONTH_END}")" "text/csv" "P&L CSV export"
 ck "$(curl -s -b /tmp/ac.txt -o /dev/null -w '%{http_code}' -H 'Accept:application/json' $B/api/dashboard/hq)" "403" "accountant blocked from HQ dashboard"
 
 finish "FINANCE"
