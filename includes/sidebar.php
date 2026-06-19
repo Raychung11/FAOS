@@ -23,6 +23,7 @@ if ($role === 'super_admin') {
         ['Subscriptions',  'superadmin/subscriptions.php', '◷', 'platform.manage'],
         ['Revenue',        'superadmin/revenue.php',       '$', 'platform.manage'],
         ['Tax Rates',      'superadmin/tax-rates.php',     '%', 'platform.manage'],
+        ['Valuation Multiples','superadmin/valuation-multiples.php','×','platform.manage'],
         ['Access Requests','superadmin/signups.php',       '✉', 'platform.manage'],
         ['Audit Trail',    'superadmin/audit.php',         '◈', 'audit.view'],
     ];
