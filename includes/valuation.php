@@ -218,6 +218,51 @@ function valuation_sensitivity(array $company, ?array $bf, array $assu, ?int $wo
 }
 
 /**
+ * Append a dated snapshot of the current valuation for one company.
+ * Stored in settings (val_history:{companyId}); no schema change.
+ * History is capped at the last 24 entries.
+ */
+function valuation_snapshot_save(int $companyId, array $val, array $assu): void
+{
+    $hist = setting_get_json('val_history:' . $companyId, []);
+    $hist[] = [
+        'date'    => date('Y-m-d'),
+        'time'    => date('H:i'),
+        'ya'      => function_exists('tax_current_ya') ? tax_current_ya() : null,
+        'assumptions' => [
+            'multiple'      => (float) ($assu['multiple']      ?? 0),
+            'discount'      => (float) ($assu['discount']      ?? 0),
+            'growth'        => (float) ($assu['growth']        ?? 0),
+            'weight_nav'    => (float) ($assu['weight_nav']    ?? 0),
+            'weight_ebitda' => (float) ($assu['weight_ebitda'] ?? 0),
+            'weight_dcf'    => (float) ($assu['weight_dcf']    ?? 0),
+        ],
+        'summary' => [
+            'nav'             => (float) ($val['nav']           ?? 0),
+            'ebitda_equity'   => (float) ($val['ebitda_equity'] ?? 0),
+            'dcf_equity'      => (float) ($val['dcf_equity']    ?? 0),
+            'low'             => (float) ($val['low']           ?? 0),
+            'mid'             => (float) ($val['mid']           ?? 0),
+            'high'            => (float) ($val['high']          ?? 0),
+            'client_stake'    => (float) ($val['client_stake']  ?? 0),
+            'discount_applied' => (float) ($val['discount']     ?? 0),
+            'ownership_pct'    => (float) ($val['share']        ?? 0) * 100,
+        ],
+        'saved_by' => function_exists('current_user') && current_user()
+            ? (string) (current_user()['name'] ?? '') : '',
+    ];
+    if (count($hist) > 24) { $hist = array_slice($hist, -24); }
+    setting_put_json('val_history:' . $companyId, $hist);
+}
+
+/** Most-recent snapshots for a company, newest first. */
+function valuation_snapshot_history(int $companyId, int $limit = 8): array
+{
+    $hist = setting_get_json('val_history:' . $companyId, []);
+    return array_slice(array_reverse($hist), 0, max(1, $limit));
+}
+
+/**
  * Client-level valuation across all companies.
  * @return array{rows:array,total_mid:float,total_stake:float,companies:int,text:string}
  */

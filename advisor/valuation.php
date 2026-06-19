@@ -26,6 +26,20 @@ if (is_post()) {
         http_response_code(403); exit('Invalid company.');
     }
     $action = (string) input('action', 'save');
+    if ($action === 'save_snapshot') {
+        $bf = bf_latest($cid);
+        $a  = valuation_assumptions($cid);
+        $worst = (risk_diagnostic($pdo, $tid, $clientId)['worst'] ?? null);
+        $val = company_valuation($co, $bf, $a, $worst);
+        if ($val['has_data']) {
+            valuation_snapshot_save($cid, $val, $a);
+            audit_log('create', 'valuation', $cid, 'Valuation snapshot saved');
+            set_flash('success', 'Snapshot saved.');
+        } else {
+            set_flash('warning', 'No financial snapshot to value — capture one first.');
+        }
+        redirect('advisor/valuation.php?client_id=' . $clientId);
+    }
     if ($action === 'apply_industry') {
         $hint = valuation_industry_lookup((string) ($co['industry'] ?? ''));
         if ($hint) {
@@ -64,7 +78,10 @@ require __DIR__ . '/../includes/header.php';
     <h2 style="margin:0;color:var(--navy)">Business Valuation</h2>
     <span class="muted"><?= e($client['full_name']) ?> · NAV · EBITDA multiple · capitalised DCF</span>
   </div>
-  <a class="btn-os ghost sm" href="<?= e(url('advisor/client-view.php?id='.$clientId)) ?>">Back to client</a>
+  <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <a class="btn-os sm" href="<?= e(url('advisor/valuation-pdf.php?client_id='.$clientId)) ?>">Download report PDF</a>
+    <a class="btn-os ghost sm" href="<?= e(url('advisor/client-view.php?id='.$clientId)) ?>">Back to client</a>
+  </div>
 </div>
 
 <?php if (!$v['rows']): ?>
@@ -175,6 +192,36 @@ require __DIR__ . '/../includes/header.php';
         </table>
         <div class="muted" style="font-size:11px;margin-top:4px">Highlighted cell = current assumptions. Range: multiple ±2, discount ±10pp from base.</div>
       </div>
+
+      <?php $hist = valuation_snapshot_history((int) $c['id'], 6); ?>
+      <div style="margin-top:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px">
+        <strong style="color:var(--navy);font-size:13px">Snapshots</strong>
+        <form method="post" style="margin:0">
+          <?= csrf_field() ?>
+          <input type="hidden" name="action" value="save_snapshot">
+          <input type="hidden" name="company_id" value="<?= (int) $c['id'] ?>">
+          <button class="btn-os ghost sm">Save snapshot</button>
+        </form>
+      </div>
+      <?php if ($hist): ?>
+        <table class="table-os" style="font-size:12px;margin-top:6px">
+          <thead><tr><th>Date</th><th>EBITDA ×</th><th>Disc %</th>
+            <th style="text-align:right">Mid (RM)</th>
+            <th style="text-align:right">Stake (RM)</th><th>Saved by</th></tr></thead>
+          <tbody>
+          <?php foreach ($hist as $h): ?>
+            <tr><td><?= e($h['date'] ?? '') ?><?= !empty($h['time']) ? ' ' . e($h['time']) : '' ?></td>
+              <td><?= e((float) ($h['assumptions']['multiple'] ?? 0)) ?>×</td>
+              <td><?= e((float) ($h['assumptions']['discount'] ?? 0)) ?>%</td>
+              <td style="text-align:right"><?= money($h['summary']['mid'] ?? 0) ?></td>
+              <td style="text-align:right"><?= money($h['summary']['client_stake'] ?? 0) ?></td>
+              <td class="muted" style="font-size:11px"><?= e($h['saved_by'] ?? '') ?></td></tr>
+          <?php endforeach; ?>
+          </tbody>
+        </table>
+      <?php else: ?>
+        <div class="muted" style="font-size:12px;margin-top:6px">No snapshots yet. Save the current state to track changes over time.</div>
+      <?php endif; ?>
     <?php endif; ?>
   </div>
 </div>

@@ -40,6 +40,9 @@ if ($role === 'super_admin') {
         ['My Documents', 'client/documents.php',       '▦', null],
         ['Appointments', 'client/appointments.php',    '◷', null],
     ];
+    $nav['Reports'] = [
+        ['Business Valuation', 'client/valuation.php', '$', null],
+    ];
     $nav['Solutions'] = [
         ['Tax Planning',           'client/solution.php?key=tax',           '%', null],
         ['Business Restructuring', 'client/solution.php?key=restructuring', '▤', null, 'soon'],
