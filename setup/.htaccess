@@ -5,7 +5,7 @@
 
 <IfModule mod_authz_core.c>
   Require all denied
-  <FilesMatch "^(install|demo_seed)\.php$">
+  <FilesMatch "^(install|demo_seed|valuation_seed)\.php$">
     Require all granted
   </FilesMatch>
 </IfModule>
@@ -13,7 +13,7 @@
 <IfModule !mod_authz_core.c>
   Order deny,allow
   Deny from all
-  <FilesMatch "^(install|demo_seed)\.php$">
+  <FilesMatch "^(install|demo_seed|valuation_seed)\.php$">
     Order allow,deny
     Allow from all
   </FilesMatch>
