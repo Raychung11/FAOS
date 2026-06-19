@@ -64,6 +64,7 @@ if ($role === 'super_admin') {
         ['Proposals',      'advisor/proposals.php',      '◰', 'proposals.manage'],
         ['Skill Library',  'advisor/skills.php',         '◆', 'proposals.manage'],
         ['Tax Knowledge',  'advisor/tax-knowledge.php',  '%', 'financial.manage'],
+        ['Valuation Knowledge', 'advisor/valuation-knowledge.php', '×', 'financial.manage'],
         ['AI Assistant',   'advisor/ai-assistant.php',   '✦', 'clients.view'],
         ['Documents',      'advisor/documents.php',      '▦', 'documents.manage'],
     ];

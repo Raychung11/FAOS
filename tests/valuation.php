@@ -63,9 +63,13 @@ $mkBf = static fn (array $over = []) => array_merge([
     'cash'              => 310000,
 ], $over);
 
+// Legacy-shape assumptions: zero the Slice C discounts/adjustments so existing
+// scalar assertions hold; Slice C behaviour is exercised in its own section.
 $defAssu = [
     'multiple' => 4.0, 'discount' => 18.0, 'growth' => 3.0,
     'weight_nav' => 20, 'weight_ebitda' => 50, 'weight_dcf' => 30,
+    'dlom_pct' => 0, 'minority_pct' => 0,
+    'dcf_method' => 'gordon', 'adjustments' => [],
 ];
 
 // ============================================================
@@ -175,6 +179,107 @@ _ok('Mid increases with multiple at fixed discount',
     $sens['grid'][0][2] <= $sens['grid'][4][2]);
 _ok('Mid decreases with larger discount at fixed multiple',
     $sens['grid'][2][0] >= $sens['grid'][2][4]);
+
+// ============================================================
+// 8. Slice C — Normalised EBITDA worksheet
+// ============================================================
+_section('Normalised EBITDA (raw + adjustments)');
+$assuNorm = array_merge($defAssu, ['adjustments' => [
+    ['label' => 'Owner remuneration above market', 'amount' => 120000],
+    ['label' => 'Related-party rent below market', 'amount' => -30000],
+    ['label' => 'One-off settlement',              'amount' => 75000],
+]]);
+$vN = company_valuation($mkCompany(), $mkBf(), $assuNorm, 2);
+_eq('Raw EBITDA passes through unchanged',        560000, $vN['raw_ebitda']);
+_eq('Adjustments total = sum of amounts',         165000, $vN['adjustments_total']);
+_eq('Normalised EBITDA = raw + adjustments',      725000, $vN['normalised_ebitda']);
+_eq('EBITDA-multiple EV uses normalised × multiple',
+    725000 * 4.0, $vN['ebitda_ev']);
+_eq('EBITDA-multiple equity uses normalised − net debt',
+    725000 * 4.0 - 840000, $vN['ebitda_equity']);
+// DCF (Gordon) base should also be normalised: 725,000 × 1.03 / 0.15 − 840,000
+_eq('Gordon DCF base = normalised EBITDA',
+    round(725000 * 1.03 / 0.15 - 840000), round($vN['dcf_equity']));
+
+$vNegAdj = company_valuation($mkCompany(),
+    $mkBf(['ebitda' => 100000]),
+    array_merge($defAssu, ['adjustments' => [['label' => 'x', 'amount' => -200000]]]), 2);
+_eq('Normalised EBITDA can go negative — EBITDA-equity floors at 0',
+    0, $vNegAdj['ebitda_equity']);
+
+// ============================================================
+// 9. Slice C — Sequential discount stack
+// ============================================================
+_section('Sequential discount stack (key-person × DLOM × minority)');
+// kp = risk band 2 → 0.25; DLOM 30%; minority 20%
+// total = 1 − (1−0.25)(1−0.30)(1−0.20) = 1 − 0.75×0.70×0.80 = 1 − 0.42 = 0.58
+$assuStack = array_merge($defAssu, ['dlom_pct' => 30, 'minority_pct' => 20]);
+$vS = company_valuation($mkCompany(), $mkBf(), $assuStack, 2);
+_eq('Key-person component recorded', 0.25, $vS['discount_keyperson'], 1e-9);
+_eq('DLOM component recorded',       0.30, $vS['discount_dlom'],      1e-9);
+_eq('Minority component recorded',   0.20, $vS['discount_minority'],  1e-9);
+_eq('Combined sequential discount',  0.58, $vS['discount'],           1e-9);
+// Mid = weighted pre × (1 − 0.58) = 1,861,600 × 0.42 = 781,872
+_eq('Mid uses combined factor',      round(1861600 * 0.42), round($vS['mid']));
+
+// All-zero stack returns 0 discount
+$vZero = company_valuation($mkCompany(), $mkBf(),
+    array_merge($defAssu, ['dlom_pct' => 0, 'minority_pct' => 0]), 0);
+_eq('All-low risk + zero DLOM/minority → 5% combined',
+    0.05, $vZero['discount'], 1e-9);
+
+// Independence: setting DLOM/minority does not move pre-discount equity
+_eq('Weighted pre-discount unchanged by DLOM/minority',
+    $v['weighted_pre_discount'], $vS['weighted_pre_discount']);
+
+// ============================================================
+// 10. Slice C — DCF method toggle
+// ============================================================
+_section('DCF method toggle (gordon vs multiyear)');
+$assuMY = array_merge($defAssu, [
+    'dcf_method' => 'multiyear', 'mdcf_years' => 5,
+    'mdcf_revenue' => 4000000, 'mdcf_growth' => 5, 'mdcf_margin' => 14,
+    'mdcf_tax_rate' => 24, 'mdcf_capex' => 3, 'mdcf_wc' => 1,
+    'mdcf_terminal_growth' => 3,
+]);
+$vMY = company_valuation($mkCompany(), $mkBf(), $assuMY, 2);
+_eq('Method label round-trips',  'multiyear', $vMY['dcf_method']);
+_ok('Multi-year DCF produces a non-zero result', $vMY['dcf_equity'] > 0);
+_ok('Multi-year DCF differs from Gordon DCF on same EBITDA',
+    abs($vMY['dcf_equity'] - $v['dcf_equity']) > 1.0);
+
+// Direct multi-year helper math: starting revenue derived from EBITDA / margin
+$direct = valuation_multiyear_dcf(array_merge($assuMY, ['mdcf_revenue' => 0]),
+    560000, 840000);
+_ok('Multi-year DCF derives revenue from EBITDA when revenue=0', $direct > 0);
+// Discount-rate guard: d ≤ terminal g → engine bumps d to tg + 0.05
+$guard = valuation_multiyear_dcf(array_merge($assuMY,
+    ['discount' => 2.0, 'mdcf_terminal_growth' => 5.0]), 560000, 840000);
+_ok('Multi-year DCF guard: d ≤ terminal g → engine bumps d safely', $guard > 0);
+
+// Gordon method (default) is still the path when dcf_method = 'gordon'
+$vG = company_valuation($mkCompany(), $mkBf(), $defAssu, 2);
+_eq('Gordon path unchanged when dcf_method = gordon',
+    'gordon', $vG['dcf_method']);
+
+// ============================================================
+// 11. Slice C — Engine tolerates absent Slice C keys (backward compat)
+// ============================================================
+_section('Backward compat — missing Slice C keys');
+// Pre-Slice-C settings would only have the core six keys. The engine must
+// fall back to safe defaults (gordon DCF, zero adjustments, no DLOM/minority).
+$assuLegacy = [
+    'multiple' => 4.0, 'discount' => 18.0, 'growth' => 3.0,
+    'weight_nav' => 20, 'weight_ebitda' => 50, 'weight_dcf' => 30,
+];
+$vL = company_valuation($mkCompany(), $mkBf(), $assuLegacy, 1);
+_eq('Legacy assumptions → dcf_method defaults to gordon', 'gordon', $vL['dcf_method']);
+_eq('Legacy assumptions → adjustments_total = 0', 0.0, $vL['adjustments_total'], 1e-9);
+_eq('Legacy assumptions → normalised = raw EBITDA', 560000, $vL['normalised_ebitda']);
+_eq('Legacy assumptions → DLOM component = 25% (engine default)',
+    0.25, $vL['discount_dlom'], 1e-9);
+_eq('Legacy assumptions → minority component = 0% (engine default)',
+    0.0, $vL['discount_minority'], 1e-9);
 
 // ============================================================
 // Summary

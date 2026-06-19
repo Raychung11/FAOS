@@ -10,6 +10,7 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/valuation.php';
+require_once __DIR__ . '/settings.php';
 
 /** Body markup only — used by the client portal inside the app shell. */
 function render_valuation_body(array $client, array $clientVal): string
@@ -21,6 +22,14 @@ function render_valuation_body(array $client, array $clientVal): string
       <div class="alert-os info">No companies recorded yet. Once your adviser
         captures them under Business profile, your valuation will appear here.</div>
       <?php return (string) ob_get_clean(); ?>
+    <?php endif; ?>
+
+    <?php $ai = setting_get_json('valuation_ai:' . (int) $client['id'], []); ?>
+    <?php if (!empty($ai['text'])): ?>
+      <div class="card-os" style="margin-bottom:14px"><div class="card-os-body">
+        <div style="font-weight:700;color:var(--navy);margin-bottom:6px">Adviser commentary</div>
+        <div style="white-space:pre-wrap;font-size:13.5px;line-height:1.6"><?= e($ai['text']) ?></div>
+      </div></div>
     <?php endif; ?>
     <div class="grid cols-3" style="margin-bottom:18px">
       <div class="stat accent"><div class="stat-label">Indicative equity value</div>
@@ -57,6 +66,24 @@ function render_valuation_body(array $client, array $clientVal): string
         <?php continue; ?>
       <?php endif; ?>
 
+      <?php if (abs((float) $v['adjustments_total']) > 0.01 || !empty($v['adjustments'])): ?>
+        <h4>Normalised EBITDA</h4>
+        <table class="table-os">
+          <tbody>
+            <tr><td>Reported EBITDA</td>
+              <td style="text-align:right">RM <?= money($v['raw_ebitda']) ?></td></tr>
+            <?php foreach ((array) $v['adjustments'] as $adj): ?>
+              <tr><td><?= e($adj['label'] ?? 'Adjustment') ?></td>
+                <td style="text-align:right">
+                  <?= ((float) ($adj['amount'] ?? 0) >= 0 ? '+' : '−') ?>RM
+                  <?= money(abs((float) ($adj['amount'] ?? 0))) ?></td></tr>
+            <?php endforeach; ?>
+            <tr><td><strong>Normalised EBITDA</strong></td>
+              <td style="text-align:right"><strong>RM <?= money($v['normalised_ebitda']) ?></strong></td></tr>
+          </tbody>
+        </table>
+      <?php endif; ?>
+
       <table class="table-os">
         <thead><tr><th>Method</th><th style="text-align:right">Equity value (RM)</th><th style="text-align:right">Weight</th></tr></thead>
         <tbody>
@@ -66,14 +93,23 @@ function render_valuation_body(array $client, array $clientVal): string
           <tr><td>EBITDA × multiple (less net debt)</td>
             <td style="text-align:right"><?= money($v['ebitda_equity']) ?></td>
             <td style="text-align:right"><?= (int) round($v['weights']['ebitda'] * 100) ?>%</td></tr>
-          <tr><td>Capitalised DCF</td>
+          <tr><td><?= ($v['dcf_method'] ?? 'gordon') === 'multiyear' ? 'Multi-year explicit DCF' : 'Capitalised DCF' ?></td>
             <td style="text-align:right"><?= money($v['dcf_equity']) ?></td>
             <td style="text-align:right"><?= (int) round($v['weights']['dcf'] * 100) ?>%</td></tr>
           <tr><td><strong>Weighted equity (pre-discount)</strong></td>
             <td style="text-align:right"><strong><?= money($v['weighted_pre_discount']) ?></strong></td>
             <td></td></tr>
-          <tr><td>Less: key-person / marketability discount</td>
-            <td style="text-align:right">−<?= (int) round($v['discount'] * 100) ?>%</td>
+          <tr><td>Less: key-person discount</td>
+            <td style="text-align:right">−<?= (int) round($v['discount_keyperson'] * 100) ?>%</td>
+            <td></td></tr>
+          <tr><td>Less: DLOM (marketability)</td>
+            <td style="text-align:right">−<?= (int) round($v['discount_dlom'] * 100) ?>%</td>
+            <td></td></tr>
+          <tr><td>Less: minority discount</td>
+            <td style="text-align:right">−<?= (int) round($v['discount_minority'] * 100) ?>%</td>
+            <td></td></tr>
+          <tr><td><strong>Combined discount (sequential)</strong></td>
+            <td style="text-align:right"><strong>−<?= (int) round($v['discount'] * 100) ?>%</strong></td>
             <td></td></tr>
           <tr><td><strong>Indicative equity (mid)</strong></td>
             <td style="text-align:right"><strong>RM <?= money($v['mid']) ?></strong></td>
@@ -162,6 +198,12 @@ function render_valuation_report_html(array $client, array $clientVal, array $br
   <tr><td>Companies valued</td>
     <td class="tnum"><?= (int) $clientVal['companies'] ?></td></tr>
 </table>
+
+<?php $ai = setting_get_json('valuation_ai:' . (int) $client['id'], []); ?>
+<?php if (!empty($ai['text'])): ?>
+  <h2>Adviser commentary</h2>
+  <div style="white-space:pre-wrap;font-size:10pt;line-height:1.55"><?= e($ai['text']) ?></div>
+<?php endif; ?>
 <div class="disclaimer"><strong>Important.</strong> This report is an indicative
 valuation for advisory discussion only — not a formal/independent valuation,
 audit, fairness opinion or transaction document. Engage a licensed valuer for any
@@ -171,15 +213,21 @@ assumptions; methodology and limitations are explained below.</div>
 <h2>1. Methodology</h2>
 <p><strong>Three methods.</strong> Each company is valued under
 <em>(i) Net Asset Value (NAV) </em>= total assets − total liabilities,
-<em>(ii) EBITDA multiple</em> = EBITDA × industry-calibrated multiple, less net debt,
-and <em>(iii) capitalised DCF</em> = base earnings × (1 + g) / (d − g), less net debt
-(Gordon growth on EBITDA or net profit).</p>
+<em>(ii) EBITDA multiple</em> = normalised EBITDA × industry-calibrated multiple, less net debt,
+and <em>(iii) DCF</em> — either capitalised (Gordon growth on normalised EBITDA or net profit)
+or a multi-year explicit forecast (5-year free cash flow + Gordon terminal value), at the
+adviser's election per company.</p>
+<p><strong>Normalised EBITDA.</strong> Reported EBITDA is adjusted for owner
+remuneration above market, related-party items and non-recurring entries to
+produce a sustainable earnings base for both the multiple and the DCF.</p>
 <p><strong>Weighted blend.</strong> The three method values are combined using
 advisor-configurable weights to produce a pre-discount equity figure. The low and
 high range reflect the minimum and maximum method values.</p>
-<p><strong>Key-person / marketability discount.</strong> A 5%–35% haircut is
-applied to the blended value based on the worst-band score from the Enterprise
-Risk Diagnostic (Low 5% → Critical 35%).</p>
+<p><strong>Sequential discount stack.</strong> Three independent haircuts are
+applied <em>multiplicatively</em>: a <em>key-person discount</em> from the worst-band
+risk score (Low 5% → Critical 35%), a <em>discount for lack of marketability (DLOM)</em>
+for the private nature of the equity, and a <em>minority discount</em> where the
+client's interest is non-controlling. Combined factor = 1 − (1 − key-person) × (1 − DLOM) × (1 − minority).</p>
 <p><strong>Net debt.</strong> Bank loans + shareholder loans − cash, floored at
 zero.</p>
 
@@ -197,20 +245,43 @@ zero.</p>
   <?php continue; ?>
 <?php endif; ?>
 
+<?php if (abs((float) $v['adjustments_total']) > 0.01 || !empty($v['adjustments'])): ?>
+  <h4>Normalised EBITDA worksheet</h4>
+  <table>
+    <tr><th>Item</th><th class="tnum">RM</th></tr>
+    <tr><td>Reported EBITDA</td><td class="tnum"><?= money($v['raw_ebitda']) ?></td></tr>
+    <?php foreach ((array) $v['adjustments'] as $adj): ?>
+      <tr><td><?= e($adj['label'] ?? 'Adjustment') ?></td>
+        <td class="tnum"><?= ((float) ($adj['amount'] ?? 0) >= 0 ? '+' : '−') ?><?= money(abs((float) ($adj['amount'] ?? 0))) ?></td></tr>
+    <?php endforeach; ?>
+    <tr><td><strong>Normalised EBITDA</strong></td>
+      <td class="tnum"><strong><?= money($v['normalised_ebitda']) ?></strong></td></tr>
+  </table>
+<?php endif; ?>
+
+<?php $dcfLabel = ($v['dcf_method'] ?? 'gordon') === 'multiyear'
+    ? 'Multi-year DCF (' . (int) ($a['mdcf_years'] ?? 5) . 'y · g=' . e($a['mdcf_growth']) . '% · margin=' . e($a['mdcf_margin']) . '% · terminal g=' . e($a['mdcf_terminal_growth']) . '%)'
+    : 'Capitalised DCF (d=' . e($a['discount']) . '%, g=' . e($a['growth']) . '%)'; ?>
 <table>
   <tr><th>Method</th><th class="tnum">Equity value (RM)</th><th class="tnum">Weight</th></tr>
   <tr><td>Net Asset Value</td><td class="tnum"><?= money($v['nav']) ?></td>
     <td class="tnum"><?= (int) round($v['weights']['nav'] * 100) ?>%</td></tr>
-  <tr><td>EBITDA × <?= e($a['multiple']) ?> (EV RM <?= money($v['ebitda_ev']) ?> − net debt RM <?= money($v['net_debt']) ?>)</td>
+  <tr><td>Normalised EBITDA × <?= e($a['multiple']) ?> (EV RM <?= money($v['ebitda_ev']) ?> − net debt RM <?= money($v['net_debt']) ?>)</td>
     <td class="tnum"><?= money($v['ebitda_equity']) ?></td>
     <td class="tnum"><?= (int) round($v['weights']['ebitda'] * 100) ?>%</td></tr>
-  <tr><td>Capitalised DCF (d=<?= e($a['discount']) ?>%, g=<?= e($a['growth']) ?>%)</td>
+  <tr><td><?= $dcfLabel ?></td>
     <td class="tnum"><?= money($v['dcf_equity']) ?></td>
     <td class="tnum"><?= (int) round($v['weights']['dcf'] * 100) ?>%</td></tr>
   <tr><td><strong>Weighted equity (pre-discount)</strong></td>
     <td class="tnum"><strong><?= money($v['weighted_pre_discount']) ?></strong></td><td></td></tr>
-  <tr><td>Less: key-person / marketability discount</td>
-    <td class="tnum">−<?= (int) round($v['discount'] * 100) ?>%</td><td></td></tr>
+  <tr><td>Less: key-person discount</td>
+    <td class="tnum">−<?= (int) round($v['discount_keyperson'] * 100) ?>%</td><td></td></tr>
+  <tr><td>Less: DLOM (marketability)</td>
+    <td class="tnum">−<?= (int) round($v['discount_dlom'] * 100) ?>%</td><td></td></tr>
+  <tr><td>Less: minority discount</td>
+    <td class="tnum">−<?= (int) round($v['discount_minority'] * 100) ?>%</td><td></td></tr>
+  <tr><td><strong>Combined discount (sequential)</strong></td>
+    <td class="tnum"><strong>−<?= (int) round($v['discount'] * 100) ?>%</strong></td><td></td></tr>
   <tr><td><strong>Indicative mid equity</strong></td>
     <td class="tnum"><strong>RM <?= money($v['mid']) ?></strong></td><td></td></tr>
   <tr><td>Indicative range (low–high)</td>

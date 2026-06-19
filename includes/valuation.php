@@ -27,6 +27,20 @@ function valuation_assumptions(int $companyId): array
         'weight_nav'    => isset($d['weight_nav'])    ? (float) $d['weight_nav']    : 20.0,
         'weight_ebitda' => isset($d['weight_ebitda']) ? (float) $d['weight_ebitda'] : 50.0,
         'weight_dcf'    => isset($d['weight_dcf'])    ? (float) $d['weight_dcf']    : 30.0,
+        // Slice C — sequential discounts, normalised EBITDA, multi-year DCF.
+        'dlom_pct'      => isset($d['dlom_pct'])     ? (float) $d['dlom_pct']     : 25.0,
+        'minority_pct'  => isset($d['minority_pct']) ? (float) $d['minority_pct'] : 0.0,
+        'dcf_method'    => in_array($d['dcf_method'] ?? '', ['gordon', 'multiyear'], true)
+                            ? $d['dcf_method'] : 'gordon',
+        'mdcf_years'    => isset($d['mdcf_years'])  ? max(1, (int) $d['mdcf_years']) : 5,
+        'mdcf_revenue'  => isset($d['mdcf_revenue']) ? (float) $d['mdcf_revenue'] : 0.0,
+        'mdcf_growth'   => isset($d['mdcf_growth'])  ? (float) $d['mdcf_growth']  : 5.0,
+        'mdcf_margin'   => isset($d['mdcf_margin'])  ? (float) $d['mdcf_margin']  : 15.0,
+        'mdcf_tax_rate' => isset($d['mdcf_tax_rate']) ? (float) $d['mdcf_tax_rate'] : 24.0,
+        'mdcf_capex'    => isset($d['mdcf_capex'])    ? (float) $d['mdcf_capex']    : 3.0,
+        'mdcf_wc'       => isset($d['mdcf_wc'])       ? (float) $d['mdcf_wc']       : 1.0,
+        'mdcf_terminal_growth' => isset($d['mdcf_terminal_growth']) ? (float) $d['mdcf_terminal_growth'] : 3.0,
+        'adjustments'   => isset($d['adjustments']) && is_array($d['adjustments']) ? $d['adjustments'] : [],
     ];
 }
 
@@ -37,6 +51,15 @@ function valuation_assumptions_save(int $companyId, array $in): void
     $wdcf = max(0.0, (float) ($in['weight_dcf']    ?? 30));
     if ($wnav + $web + $wdcf <= 0) { $wnav = 20; $web = 50; $wdcf = 30; }
 
+    // Normalise / sanitise adjustments list (label + signed amount).
+    $adjustments = [];
+    foreach ((array) ($in['adjustments'] ?? []) as $a) {
+        $label  = trim(mb_substr((string) ($a['label'] ?? ''), 0, 120));
+        $amount = (float) ($a['amount'] ?? 0);
+        if ($label === '' && abs($amount) < 0.01) { continue; }
+        $adjustments[] = ['label' => $label !== '' ? $label : 'Adjustment', 'amount' => $amount];
+    }
+
     setting_put_json('val:' . $companyId, [
         'multiple'      => min(20, max(0, (float) ($in['multiple'] ?? 4))),
         'discount'      => min(50, max(1, (float) ($in['discount'] ?? 18))),
@@ -44,6 +67,19 @@ function valuation_assumptions_save(int $companyId, array $in): void
         'weight_nav'    => min(100, $wnav),
         'weight_ebitda' => min(100, $web),
         'weight_dcf'    => min(100, $wdcf),
+        'dlom_pct'      => min(90, max(0, (float) ($in['dlom_pct']     ?? 25))),
+        'minority_pct'  => min(90, max(0, (float) ($in['minority_pct'] ?? 0))),
+        'dcf_method'    => in_array($in['dcf_method'] ?? '', ['gordon', 'multiyear'], true)
+                            ? $in['dcf_method'] : 'gordon',
+        'mdcf_years'    => max(1, min(10, (int) ($in['mdcf_years'] ?? 5))),
+        'mdcf_revenue'  => max(0.0, (float) ($in['mdcf_revenue']  ?? 0)),
+        'mdcf_growth'   => min(50, (float) ($in['mdcf_growth']  ?? 5)),
+        'mdcf_margin'   => max(0.0, min(100, (float) ($in['mdcf_margin']  ?? 15))),
+        'mdcf_tax_rate' => max(0.0, min(50, (float) ($in['mdcf_tax_rate'] ?? 24))),
+        'mdcf_capex'    => max(0.0, min(50, (float) ($in['mdcf_capex']    ?? 3))),
+        'mdcf_wc'       => min(50, (float) ($in['mdcf_wc']       ?? 1)),
+        'mdcf_terminal_growth' => min(15, max(0, (float) ($in['mdcf_terminal_growth'] ?? 3))),
+        'adjustments'   => $adjustments,
     ]);
 }
 
@@ -124,43 +160,105 @@ function valuation_industry_lookup(string $industry): ?array
 }
 
 /**
+ * Multi-year explicit DCF: 5-year (default) forecast of EBITDA from
+ * a base revenue + growth + margin, less tax + capex + working capital,
+ * discounted at the cost of capital + Gordon-growth terminal value.
+ * Returns equity value (EV − net debt, floored at 0).
+ */
+function valuation_multiyear_dcf(array $assu, float $startEbitda, float $netDebt): float
+{
+    $years  = max(1, (int) ($assu['mdcf_years'] ?? 5));
+    $margin = max(0.0001, (float) ($assu['mdcf_margin'] ?? 15) / 100);
+    $rev    = (float) ($assu['mdcf_revenue'] ?? 0);
+    if ($rev <= 0) {
+        // Derive from current EBITDA / forecast margin.
+        $rev = $startEbitda > 0 ? $startEbitda / $margin : 0.0;
+    }
+    if ($rev <= 0) { return 0.0; }
+
+    $g    = (float) ($assu['mdcf_growth']   ?? 5) / 100;
+    $tax  = max(0.0, (float) ($assu['mdcf_tax_rate'] ?? 24) / 100);
+    $cap  = max(0.0, (float) ($assu['mdcf_capex']    ?? 3) / 100);
+    $wcp  = (float) ($assu['mdcf_wc']       ?? 1) / 100;
+    $d    = (float) ($assu['discount']      ?? 18) / 100;
+    $tg   = (float) ($assu['mdcf_terminal_growth'] ?? 3) / 100;
+    if ($d <= $tg) { $d = $tg + 0.05; }
+
+    $sumPv  = 0.0;
+    $prev   = $rev;
+    $lastFcf = 0.0;
+    for ($t = 1; $t <= $years; $t++) {
+        $thisRev = $prev * (1 + $g);
+        $ebitda  = $thisRev * $margin;
+        $deltaRev = $thisRev - $prev;
+        $fcf = $ebitda - ($ebitda * $tax) - ($thisRev * $cap) - ($deltaRev * $wcp);
+        $sumPv += $fcf / pow(1 + $d, $t);
+        $lastFcf = $fcf;
+        $prev = $thisRev;
+    }
+    $terminal   = ($lastFcf * (1 + $tg)) / ($d - $tg);
+    $terminalPv = $terminal / pow(1 + $d, $years);
+
+    return max(0.0, ($sumPv + $terminalPv) - $netDebt);
+}
+
+/**
  * Pure valuation of one company. $bf may be null (no data).
  * Weighted blend across NAV / EBITDA-multiple / DCF (advisor-adjustable),
  * with low/high bounds still as min/max of the three methods × (1 - discount).
+ * Slice C: applies a normalised EBITDA (reported + adjustments), supports
+ * the multi-year explicit DCF method, and stacks key-person × DLOM ×
+ * minority discounts sequentially.
  * @return array
  */
 function company_valuation(array $company, ?array $bf, array $assu, ?int $worstRisk): array
 {
-    $share = min(1.0, max(0.0, (float) $company['ownership_pct'] / 100));
-    $disc  = valuation_risk_discount($worstRisk);
+    $share     = min(1.0, max(0.0, (float) $company['ownership_pct'] / 100));
+    $keyperson = valuation_risk_discount($worstRisk);
 
     if (!$bf) {
-        return ['has_data' => false, 'share' => $share, 'discount' => $disc,
+        return ['has_data' => false, 'share' => $share, 'discount' => $keyperson,
+                'discount_keyperson' => $keyperson, 'discount_dlom' => 0.0,
+                'discount_minority' => 0.0,
                 'nav' => 0.0, 'ebitda_equity' => 0.0, 'dcf_equity' => 0.0,
                 'low' => 0.0, 'mid' => 0.0, 'high' => 0.0, 'client_stake' => 0.0,
                 'weights' => ['nav' => 0.0, 'ebitda' => 0.0, 'dcf' => 0.0],
-                'weighted_pre_discount' => 0.0];
+                'weighted_pre_discount' => 0.0,
+                'raw_ebitda' => 0.0, 'normalised_ebitda' => 0.0,
+                'adjustments_total' => 0.0, 'adjustments' => [],
+                'dcf_method' => $assu['dcf_method'] ?? 'gordon'];
     }
 
     $assets  = (float) $bf['total_assets'];
     $liab    = (float) $bf['total_liabilities'];
-    $ebitda  = (float) $bf['ebitda'];
+    $rawEbitda = (float) $bf['ebitda'];
     $netP    = (float) $bf['net_profit'];
     $netDebt = max(0.0, (float) $bf['bank_loans'] + (float) $bf['shareholder_loans'] - (float) $bf['cash']);
 
+    // Normalised EBITDA = raw + sum of adjustments.
+    $adjustments = (array) ($assu['adjustments'] ?? []);
+    $adjustmentsTotal = 0.0;
+    foreach ($adjustments as $adj) { $adjustmentsTotal += (float) ($adj['amount'] ?? 0); }
+    $normalisedEbitda = $rawEbitda + $adjustmentsTotal;
+
     $nav = $assets - $liab;
 
-    $ebitdaEv     = max(0.0, $ebitda) * (float) $assu['multiple'];
+    $ebitdaEv     = max(0.0, $normalisedEbitda) * (float) $assu['multiple'];
     $ebitdaEquity = max(0.0, $ebitdaEv - $netDebt);
 
-    $base = $ebitda > 0 ? $ebitda : $netP;
-    if ($base <= 0) {
-        $dcfEquity = max(0.0, $nav);
+    $dcfMethod = ($assu['dcf_method'] ?? 'gordon') === 'multiyear' ? 'multiyear' : 'gordon';
+    if ($dcfMethod === 'multiyear') {
+        $dcfEquity = valuation_multiyear_dcf($assu, $normalisedEbitda, $netDebt);
     } else {
-        $d = (float) $assu['discount'] / 100;
-        $g = (float) $assu['growth'] / 100;
-        if ($d <= $g) { $d = $g + 0.05; }
-        $dcfEquity = max(0.0, $base * (1 + $g) / ($d - $g) - $netDebt);
+        $base = $normalisedEbitda > 0 ? $normalisedEbitda : $netP;
+        if ($base <= 0) {
+            $dcfEquity = max(0.0, $nav);
+        } else {
+            $d = (float) $assu['discount'] / 100;
+            $g = (float) $assu['growth'] / 100;
+            if ($d <= $g) { $d = $g + 0.05; }
+            $dcfEquity = max(0.0, $base * (1 + $g) / ($d - $g) - $netDebt);
+        }
     }
 
     $methods = [max(0.0, $nav), $ebitdaEquity, $dcfEquity];
@@ -172,12 +270,21 @@ function company_valuation(array $company, ?array $bf, array $assu, ?int $worstR
     $wsum = max(1e-9, array_sum($weights));
     $weightedPre = ($methods[0] * $weights[0] + $methods[1] * $weights[1] + $methods[2] * $weights[2]) / $wsum;
 
-    $f = 1 - $disc;
+    // Sequential haircuts: key-person × DLOM × minority.
+    $dlom     = max(0.0, min(0.9, (float) ($assu['dlom_pct']     ?? 25) / 100));
+    $minority = max(0.0, min(0.9, (float) ($assu['minority_pct'] ?? 0)  / 100));
+    $totalDiscount = 1 - (1 - $keyperson) * (1 - $dlom) * (1 - $minority);
+    $f = 1 - $totalDiscount;
+
     $low  = min($methods) * $f;
     $high = max($methods) * $f;
     $mid  = $weightedPre * $f;
 
-    return ['has_data' => true, 'share' => $share, 'discount' => $disc,
+    return ['has_data' => true, 'share' => $share,
+            'discount' => $totalDiscount,
+            'discount_keyperson' => $keyperson,
+            'discount_dlom'      => $dlom,
+            'discount_minority'  => $minority,
             'nav' => $nav, 'ebitda_ev' => $ebitdaEv, 'ebitda_equity' => $ebitdaEquity,
             'dcf_equity' => $dcfEquity, 'net_debt' => $netDebt,
             'low' => $low, 'mid' => $mid, 'high' => $high,
@@ -185,7 +292,10 @@ function company_valuation(array $company, ?array $bf, array $assu, ?int $worstR
             'weights' => ['nav' => $weights[0] / $wsum,
                           'ebitda' => $weights[1] / $wsum,
                           'dcf' => $weights[2] / $wsum],
-            'weighted_pre_discount' => $weightedPre];
+            'weighted_pre_discount' => $weightedPre,
+            'raw_ebitda' => $rawEbitda, 'normalised_ebitda' => $normalisedEbitda,
+            'adjustments_total' => $adjustmentsTotal, 'adjustments' => $adjustments,
+            'dcf_method' => $dcfMethod];
 }
 
 /**
@@ -246,7 +356,13 @@ function valuation_snapshot_save(int $companyId, array $val, array $assu): void
             'high'            => (float) ($val['high']          ?? 0),
             'client_stake'    => (float) ($val['client_stake']  ?? 0),
             'discount_applied' => (float) ($val['discount']     ?? 0),
-            'ownership_pct'    => (float) ($val['share']        ?? 0) * 100,
+            'discount_keyperson' => (float) ($val['discount_keyperson'] ?? 0),
+            'discount_dlom'      => (float) ($val['discount_dlom']      ?? 0),
+            'discount_minority'  => (float) ($val['discount_minority']  ?? 0),
+            'normalised_ebitda'  => (float) ($val['normalised_ebitda']  ?? 0),
+            'adjustments_total'  => (float) ($val['adjustments_total']  ?? 0),
+            'dcf_method'         => (string) ($val['dcf_method']        ?? 'gordon'),
+            'ownership_pct'      => (float) ($val['share']              ?? 0) * 100,
         ],
         'saved_by' => function_exists('current_user') && current_user()
             ? (string) (current_user()['name'] ?? '') : '',
