@@ -240,7 +240,8 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
        then turns it into a prioritised plan and a written report. Built for
        Malaysia. Less admin, deeper advice.</p>
     <div class="lp-cta">
-      <a class="lp-btn primary" href="<?= e(url('signup.php')) ?>">Get started</a>
+      <a class="lp-btn primary" href="<?= e(url('valuation-try.php')) ?>">Try free: value my business</a>
+      <a class="lp-btn ghost" href="<?= e(url('signup.php')) ?>">Get started</a>
       <a class="lp-btn ghost" href="#how">See how it works</a>
     </div>
     <?php if ($heroImg): ?>
