@@ -42,6 +42,7 @@ if ($role === 'super_admin') {
     ];
     $nav['Reports'] = [
         ['Business Valuation', 'client/valuation.php', '$', null],
+        ['Equity Structure',   'client/equity.php',    '◆', null],
     ];
     $nav['Solutions'] = [
         ['Tax Planning',           'client/solution.php?key=tax',           '%', null],
@@ -65,6 +66,7 @@ if ($role === 'super_admin') {
         ['Skill Library',  'advisor/skills.php',         '◆', 'proposals.manage'],
         ['Tax Knowledge',  'advisor/tax-knowledge.php',  '%', 'financial.manage'],
         ['Valuation Knowledge', 'advisor/valuation-knowledge.php', '×', 'financial.manage'],
+        ['Equity Knowledge', 'advisor/equity-knowledge.php', '◆', 'financial.manage'],
         ['AI Assistant',   'advisor/ai-assistant.php',   '✦', 'clients.view'],
         ['Documents',      'advisor/documents.php',      '▦', 'documents.manage'],
     ];

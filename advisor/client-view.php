@@ -114,6 +114,7 @@ if ($svc || can('financial.manage')):
         <a class="btn-os ghost sm" href="<?= e(url('advisor/risk-diagnostic.php?client_id='.$id)) ?>">Risk diagnostic</a>
         <a class="btn-os ghost sm" href="<?= e(url('advisor/companies.php?client_id='.$id)) ?>">Business profile</a>
         <a class="btn-os ghost sm" href="<?= e(url('advisor/valuation.php?client_id='.$id)) ?>">Valuation</a>
+        <a class="btn-os ghost sm" href="<?= e(url('advisor/equity.php?client_id='.$id)) ?>">Equity Assessment</a>
         <a class="btn-os ghost sm" href="<?= e(url('advisor/succession.php?client_id='.$id)) ?>">Succession</a>
         <a class="btn-os ghost sm" href="<?= e(url('advisor/capability.php?client_id='.$id)) ?>">Borrowing capability</a>
         <a class="btn-os ghost sm" href="<?= e(url('advisor/tax.php?client_id='.$id)) ?>">Tax planning</a>
