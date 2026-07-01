@@ -92,7 +92,7 @@ try {
 
     // ---- Super Admin ---------------------------------------------
     $out('→ Creating Super Admin ...');
-    $upsertUser(null, $roleId['super_admin'], 'Platform Super Admin', 'superadmin@maxwealth-edu.my');
+    $upsertUser(null, $roleId['super_admin'], 'Platform Super Admin', 'superadmin@maxwealth-ai.my');
 
     // ---- Demo tenant ---------------------------------------------
     $out('→ Creating demo tenant ...');
@@ -124,7 +124,7 @@ try {
     $out('-------------------------------------------------------------');
     $out(' Default password for ALL seeded accounts: ' . $defaultPass);
     $out('');
-    $out(' Super Admin   superadmin@maxwealth-edu.my');
+    $out(' Super Admin   superadmin@maxwealth-ai.my');
     $out(' Tenant Admin  admin@demo-advisory.test');
     $out(' Agency Leader leader@demo-advisory.test');
     $out(' Advisor       advisor@demo-advisory.test');
