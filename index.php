@@ -222,6 +222,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
   <div class="lp-wrap lp-nav">
     <div class="lp-logo"><?= e(APP_NAME) ?><span>OS</span></div>
     <div class="lp-links">
+      <a href="#tools">Free tools</a>
       <a href="#features">Features</a>
       <a href="#solutions">Solutions</a>
       <a href="#how">How it works</a>
@@ -240,7 +241,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
        then turns it into a prioritised plan and a written report. Built for
        Malaysia. Less admin, deeper advice.</p>
     <div class="lp-cta">
-      <a class="lp-btn primary" href="<?= e(url('valuation-try.php')) ?>">Try free: value my business</a>
+      <a class="lp-btn primary" href="#tools">Try free tools</a>
       <a class="lp-btn ghost" href="<?= e(url('signup.php')) ?>">Get started</a>
       <a class="lp-btn ghost" href="#how">See how it works</a>
     </div>
@@ -274,6 +275,46 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
         </div></div>
       <?php endforeach; ?>
     </div>
+  </section>
+
+  <section class="lp-sec reveal" id="tools" style="background:linear-gradient(180deg,#f7f9fc 0%,var(--bg) 100%);padding:60px 24px;border-radius:20px;margin:20px 0">
+    <h2>Try the platform — free, no signup</h2>
+    <p class="sub">Business owners: run our two most-requested reports on your own numbers, right now.
+       Save your result with a shareable link and come back any time.</p>
+    <div class="lp-feat" style="grid-template-columns:1fr 1fr;gap:20px;max-width:920px;margin:0 auto">
+      <div class="card-os"><div class="card-os-body">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:26px;color:var(--gold)">$</div>
+          <h3 style="margin:0">What's my business worth?</h3>
+        </div>
+        <p style="color:var(--navy);font-weight:600;margin:0 0 8px">Free indicative valuation · 60 seconds</p>
+        <ul style="margin:0 0 14px;padding-left:18px;color:var(--muted);font-size:13.5px;line-height:1.65">
+          <li>Same three-method engine (NAV / EBITDA / DCF) we use for paying clients</li>
+          <li>Industry-calibrated multiple applied automatically</li>
+          <li>Discount stack for key-person, marketability &amp; minority position</li>
+          <li><strong>3 free attempts</strong> per visitor</li>
+        </ul>
+        <a class="lp-btn primary" href="<?= e(url('valuation-try.php')) ?>">Value my business →</a>
+      </div></div>
+      <div class="card-os"><div class="card-os-body">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
+          <div style="font-size:26px;color:var(--gold)">◆</div>
+          <h3 style="margin:0">Is my equity structure ready?</h3>
+        </div>
+        <p style="color:var(--navy);font-weight:600;margin:0 0 8px">50-indicator health check for SME cap tables</p>
+        <ul style="margin:0 0 14px;padding-left:18px;color:var(--muted);font-size:13.5px;line-height:1.65">
+          <li>The full Malaysian SME equity-planning framework</li>
+          <li>Auto-detected red flags (proxy, SHA gaps, IP on individual, faraid risk…)</li>
+          <li><strong>Save with a shareable link</strong> and come back to edit</li>
+          <li>Category scores + composite Low / Moderate / High / Critical band</li>
+        </ul>
+        <a class="lp-btn primary" href="<?= e(url('equity-try.php')) ?>">Check my equity →</a>
+      </div></div>
+    </div>
+    <p style="text-align:center;color:var(--muted);font-size:13px;margin:24px auto 0;max-width:600px">
+      Ready for the full picture — with AI-written commentary, PDF reports and an adviser to walk you through?
+      <a href="<?= e(url('signup.php')) ?>" style="color:var(--navy);font-weight:600">Sign up free →</a>
+    </p>
   </section>
 
   <section class="lp-sec reveal" id="solutions">
