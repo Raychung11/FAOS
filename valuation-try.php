@@ -16,11 +16,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/valuation.php';
+require_once __DIR__ . '/includes/owner_auth.php';
 
-// Public page — but logged-in users should go to the real tool.
+// Public page — but signed-in advisors should go to the real tool.
 if (is_logged_in() || attempt_remember_login()) {
     redirect('advisor/clients.php');
 }
+
+$owner = owner_current();
 
 const VTRY_MAX_PER_VISITOR = 3;
 
@@ -54,7 +57,7 @@ function vtry_count_increment(): void
 }
 
 $used    = vtry_count_used();
-$locked  = $used >= VTRY_MAX_PER_VISITOR;
+$locked  = !$owner && $used >= VTRY_MAX_PER_VISITOR;
 $result  = null;
 $inputs  = [
     'industry'      => '',
@@ -125,9 +128,24 @@ if (is_post() && !$locked) {
             'ownership' => $ownershipPct,
             'risk_band' => $riskBand,
         ];
-        vtry_count_increment();
-        $used   = vtry_count_used();
-        $locked = $used >= VTRY_MAX_PER_VISITOR;
+        // Signed-in owners get unlimited calculations and every result is
+        // pinned to their dashboard automatically.
+        if ($owner) {
+            $ref = 'vt_' . substr(hash('sha256',
+                (string) microtime(true) . '|' . $owner['email']), 0, 16);
+            owner_attach_report('valuation', $ref, [
+                'label'      => ($industry ?: 'Business valuation'),
+                'mid'        => (float) $v['mid'],
+                'stake'      => (float) $v['client_stake'],
+                'ownership'  => $ownershipPct,
+                'multiple'   => $multiple,
+                'inputs'     => $inputs,
+            ]);
+        } else {
+            vtry_count_increment();
+            $used   = vtry_count_used();
+            $locked = $used >= VTRY_MAX_PER_VISITOR;
+        }
     }
 }
 
@@ -221,8 +239,13 @@ $pageTitle = 'Try the Business Valuation — AdvisorOS';
     <a href="<?= e(url('index.php')) ?>" class="vt-logo" style="text-decoration:none"><?= e(APP_NAME) ?><span>OS</span></a>
     <div style="display:flex;gap:12px;align-items:center">
       <a href="<?= e(url('index.php')) ?>" style="font-size:14px;color:var(--ink);text-decoration:none;font-weight:500">← Back to home</a>
-      <a class="vt-btn ghost" style="padding:8px 16px;font-size:13px"
-         href="<?= e(url('login.php')) ?>">Sign in</a>
+      <?php if ($owner): ?>
+        <a class="vt-btn ghost" style="padding:8px 16px;font-size:13px" href="<?= e(url('owner-portal.php')) ?>">My dashboard</a>
+        <span style="color:var(--muted);font-size:12.5px"><?= e($owner['name']) ?></span>
+      <?php else: ?>
+        <a class="vt-btn ghost" style="padding:8px 16px;font-size:13px" href="<?= e(url('owner-login.php')) ?>">Sign in</a>
+        <a class="vt-btn primary" style="padding:8px 16px;font-size:13px" href="<?= e(url('owner-signup.php')) ?>">Create account</a>
+      <?php endif; ?>
     </div>
   </div>
 </div>
@@ -234,10 +257,17 @@ $pageTitle = 'Try the Business Valuation — AdvisorOS';
   <p>A free, indicative valuation using the same three-method engine we
      use inside the platform — Net Asset Value, EBITDA multiple, and
      a discounted cash flow. Takes about a minute.</p>
-  <span class="vt-quota">
-    <strong><?= max(0, VTRY_MAX_PER_VISITOR - $used) ?></strong>
-    of <?= VTRY_MAX_PER_VISITOR ?> free attempts remaining
-  </span>
+  <?php if ($owner): ?>
+    <span class="vt-quota">✓ Unlimited saves · pinned to
+      <strong><?= e($owner['name']) ?>'s</strong> dashboard</span>
+  <?php else: ?>
+    <span class="vt-quota">
+      <strong><?= max(0, VTRY_MAX_PER_VISITOR - $used) ?></strong>
+      of <?= VTRY_MAX_PER_VISITOR ?> free attempts remaining ·
+      <a href="<?= e(url('owner-signup.php')) ?>" style="color:var(--navy);font-weight:600">Create a free account</a>
+      for unlimited
+    </span>
+  <?php endif; ?>
 </header>
 
 <?php if ($locked && !$result): ?>

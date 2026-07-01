@@ -312,8 +312,12 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
       </div></div>
     </div>
     <p style="text-align:center;color:var(--muted);font-size:13px;margin:24px auto 0;max-width:600px">
-      Ready for the full picture — with AI-written commentary, PDF reports and an adviser to walk you through?
-      <a href="<?= e(url('signup.php')) ?>" style="color:var(--navy);font-weight:600">Sign up free →</a>
+      Business owners: <a href="<?= e(url('owner-signup.php')) ?>" style="color:var(--navy);font-weight:600">create a free account</a>
+      to save unlimited reports and access them from any device.
+      <br style="line-height:2">
+      Already have an account?
+      <a href="<?= e(url('owner-login.php')) ?>" style="color:var(--navy)">Sign in →</a>
+      · Adviser or firm? <a href="<?= e(url('signup.php')) ?>" style="color:var(--navy)">Request adviser access →</a>
     </p>
   </section>
 

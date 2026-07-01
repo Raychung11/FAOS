@@ -19,11 +19,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/includes/bootstrap.php';
 require_once __DIR__ . '/includes/equity_engine.php';
+require_once __DIR__ . '/includes/owner_auth.php';
 
 if (is_logged_in() || attempt_remember_login()) {
-    // Signed-in advisors / clients don't need the public teaser.
+    // Signed-in advisors / firm portal clients don't need the public teaser.
     redirect(role_home(current_user()['role_code']));
 }
+
+$owner = owner_current();
 
 const EQ_TRY_MAX_SAVES_PER_DAY   = 3;
 const EQ_TRY_REPORT_TTL_DAYS     = 90;
@@ -129,17 +132,34 @@ if (is_post()) {
     $data['archetype'] = trim(mb_substr((string) $submitted['archetype'], 0, 60));
 
     if ($action === 'save') {
-        // Persist to a token URL so visitor can come back.
-        if (eq_try_saves_used() >= EQ_TRY_MAX_SAVES_PER_DAY && !$rec) {
-            $errors[] = 'You\'ve used your 3 saves for today. Bookmark this page and come back tomorrow, or sign up for unlimited access.';
+        // Signed-in owners get unlimited saves and their reports attach
+        // to their account automatically. Anonymous visitors are capped
+        // at 3 new saves per day (updates to an existing token are free).
+        $isOwner = owner_is_logged_in();
+        if (!$isOwner && eq_try_saves_used() >= EQ_TRY_MAX_SAVES_PER_DAY && !$rec) {
+            $errors[] = 'You\'ve used your 3 saves for today. '
+                . 'Create a free account for unlimited saves, or come back tomorrow.';
         } else {
             if (!$token) { $token = eq_try_new_token(); }
             $email = trim((string) input('email', ''));
             if ($email !== '' && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
                 $email = ''; // silently drop invalid — not a hard error
             }
-            eq_try_save($token, $data, $email !== '' ? $email : ($savedEmail ?: null));
-            if (!$rec) { eq_try_save_recorded(); }
+            $storedEmail = $email !== '' ? $email
+                : ($savedEmail ?: ($isOwner ? $owner['email'] : null));
+            eq_try_save($token, $data, $storedEmail);
+            if (!$rec && !$isOwner) { eq_try_save_recorded(); }
+            if ($isOwner) {
+                owner_attach_report('equity', $token, [
+                    'label'     => 'Equity assessment',
+                    'answered'  => equity_score($data)['answered'],
+                    'total'     => count(equity_indicators()),
+                    'score_pct' => round(equity_score($data)['total'], 1),
+                    'band'      => equity_score($data)['band'],
+                    'band_code' => equity_score($data)['band_code'],
+                    'red_flags' => count(equity_score($data)['red_flags']),
+                ]);
+            }
             $_SESSION['eq_try_just_saved'] = 1;
             redirect('equity-try.php?token=' . $token . '#result');
         }
@@ -253,7 +273,17 @@ $pageTitle = 'Free Equity Structure Assessment — AdvisorOS';
   <a href="<?= e(url('index.php')) ?>" class="eq-logo"><?= e(APP_NAME) ?><span>OS</span></a>
   <div style="display:flex;gap:12px;align-items:center">
     <a href="<?= e(url('index.php')) ?>" style="font-size:14px;color:var(--ink);text-decoration:none;font-weight:500">← Home</a>
-    <a class="eq-btn ghost" style="padding:8px 16px;font-size:13px" href="<?= e(url('login.php')) ?>">Sign in</a>
+    <?php if ($owner): ?>
+      <a class="eq-btn ghost" style="padding:8px 16px;font-size:13px" href="<?= e(url('owner-portal.php')) ?>">
+        My dashboard
+      </a>
+      <span style="color:var(--muted);font-size:12.5px">
+        <?= e($owner['name']) ?>
+      </span>
+    <?php else: ?>
+      <a class="eq-btn ghost" style="padding:8px 16px;font-size:13px" href="<?= e(url('owner-login.php')) ?>">Sign in</a>
+      <a class="eq-btn primary" style="padding:8px 16px;font-size:13px" href="<?= e(url('owner-signup.php')) ?>">Create account</a>
+    <?php endif; ?>
   </div>
 </div>
 
@@ -383,17 +413,26 @@ $pageTitle = 'Free Equity Structure Assessment — AdvisorOS';
   <div class="eq-card">
     <div style="font-weight:700;color:var(--navy);margin-bottom:6px">Save your progress</div>
     <div class="muted" style="font-size:12.5px;margin-bottom:10px">
-      Get a unique link to come back to this report — kept for <?= EQ_TRY_REPORT_TTL_DAYS ?> days.
-      <?php if (eq_try_saves_used() > 0 && !$rec): ?>
-        <br>Free saves used today: <strong><?= eq_try_saves_used() ?></strong> of <?= EQ_TRY_MAX_SAVES_PER_DAY ?>.
+      <?php if ($owner): ?>
+        Saves attach to your account (<?= e($owner['email']) ?>) automatically —
+        unlimited, accessible from your <a href="<?= e(url('owner-portal.php')) ?>">dashboard</a>.
+      <?php else: ?>
+        Get a unique link to come back to this report — kept for <?= EQ_TRY_REPORT_TTL_DAYS ?> days.
+        Or <a href="<?= e(url('owner-signup.php' . ($token ? '?token=' . $token : ''))) ?>"><strong>create a free account</strong></a>
+        to save unlimited reports and see them on your dashboard.
+        <?php if (eq_try_saves_used() > 0 && !$rec): ?>
+          <br>Anonymous saves used today: <strong><?= eq_try_saves_used() ?></strong> of <?= EQ_TRY_MAX_SAVES_PER_DAY ?>.
+        <?php endif; ?>
       <?php endif; ?>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-      <input name="email" type="email" placeholder="Email (optional — we'll show your link)"
-             value="<?= e($savedEmail) ?>"
-             style="flex:1;min-width:240px;max-width:360px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px">
+      <?php if (!$owner): ?>
+        <input name="email" type="email" placeholder="Email (optional — we'll show your link)"
+               value="<?= e($savedEmail) ?>"
+               style="flex:1;min-width:240px;max-width:360px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font-size:14px">
+      <?php endif; ?>
       <button type="submit" class="eq-btn primary">
-        <?= $rec ? 'Update saved report' : 'Save &amp; get link' ?>
+        <?= $rec ? 'Update saved report' : ($owner ? 'Save to my account' : 'Save &amp; get link') ?>
       </button>
     </div>
   </div>
