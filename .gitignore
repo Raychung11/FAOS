@@ -1,0 +1,27 @@
+# Environment / secrets
+.env
+config/db_config.local.php
+
+# Composer
+/vendor/
+composer.lock
+
+# Uploads (keep folder structure, ignore content)
+uploads/documents/*
+uploads/proposals/*
+!uploads/documents/.gitkeep
+!uploads/proposals/.gitkeep
+
+# Installer lock (generated on the server after first run)
+setup/.installed.lock
+
+# Logs
+*.log
+logs/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
