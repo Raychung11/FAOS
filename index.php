@@ -94,7 +94,7 @@ foreach (['webp', 'jpg', 'jpeg', 'png'] as $ext) {
     }
 }
 
-$pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
+$pageTitle = APP_NAME . ' — The Entrepreneur Wealth Advisory Platform';
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -220,7 +220,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
 <body>
 <div class="lp-navbar" id="nav">
   <div class="lp-wrap lp-nav">
-    <div class="lp-logo"><?= e(APP_NAME) ?><span>OS</span></div>
+    <div class="lp-logo"><?= e(APP_NAME) ?></div>
     <div class="lp-links">
       <a href="#tools">Free tools</a>
       <a href="#features">Features</a>
@@ -236,7 +236,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
 <div class="lp-wrap">
   <header class="lp-hero">
     <h1>The wealth advisory platform<br>for business owners</h1>
-    <p>AdvisorOS shows an entrepreneur's personal <em>and</em> business wealth
+    <p><?= e(APP_NAME) ?> shows an entrepreneur's personal <em>and</em> business wealth
        in one place — risks, company value, succession, tax and financing —
        then turns it into a prioritised plan and a written report. Built for
        Malaysia. Less admin, deeper advice.</p>
@@ -247,7 +247,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
     </div>
     <?php if ($heroImg): ?>
       <div class="lp-hero-img">
-        <img src="<?= e(url($heroImg)) ?>" alt="AdvisorOS in use"
+        <img src="<?= e(url($heroImg)) ?>" alt="<?= e(APP_NAME) ?> in use"
              loading="lazy" decoding="async">
       </div>
     <?php endif; ?>
@@ -435,7 +435,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
 
   <section class="lp-sec reveal">
     <h2>What advisory firms say</h2>
-    <p class="sub">How teams put AdvisorOS to work.</p>
+    <p class="sub">How teams put <?= e(APP_NAME) ?> to work.</p>
     <div class="lp-tst">
       <?php foreach ($testimonials as [$q, $by, $ro]): ?>
         <div class="lp-quote">
@@ -475,7 +475,7 @@ $pageTitle = 'AdvisorOS — The Entrepreneur Wealth Advisory Platform';
   </section>
 
   <footer class="lp-foot">
-    AdvisorOS is a practice-management platform. It does not provide
+    <?= e(APP_NAME) ?> is a practice-management platform. It does not provide
     financial advice; all recommendations must be reviewed and approved by a
     licensed financial advisor.<br>
     &copy; <?= date('Y') ?> <?= e(APP_NAME) ?>. All rights reserved.

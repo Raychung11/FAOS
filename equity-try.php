@@ -181,7 +181,7 @@ $publicUrl = ($_SERVER['HTTPS'] ?? '') && $_SERVER['HTTPS'] !== 'off' ? 'https:/
 $publicUrl .= ($_SERVER['HTTP_HOST'] ?? 'localhost') . strtok((string) $_SERVER['REQUEST_URI'], '?');
 if ($token) { $publicUrl .= '?token=' . $token; }
 
-$pageTitle = 'Free Equity Structure Assessment — AdvisorOS';
+$pageTitle = 'Free Equity Structure Assessment — ' . APP_NAME;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -270,7 +270,7 @@ $pageTitle = 'Free Equity Structure Assessment — AdvisorOS';
 </head>
 <body>
 <div class="eq-nav">
-  <a href="<?= e(url('index.php')) ?>" class="eq-logo"><?= e(APP_NAME) ?><span>OS</span></a>
+  <a href="<?= e(url('index.php')) ?>" class="eq-logo"><?= e(APP_NAME) ?></a>
   <div style="display:flex;gap:12px;align-items:center">
     <a href="<?= e(url('index.php')) ?>" style="font-size:14px;color:var(--ink);text-decoration:none;font-weight:500">← Home</a>
     <?php if ($owner): ?>
@@ -499,7 +499,7 @@ $pageTitle = 'Free Equity Structure Assessment — AdvisorOS';
 <?php endif; ?>
 
 <footer style="text-align:center;padding:30px 0;color:var(--muted);font-size:12.5px">
-  © <?= date('Y') ?> <?= e(APP_NAME) ?>OS · Built for Malaysian SMEs ·
+  © <?= date('Y') ?> <?= e(APP_NAME) ?> · Built for Malaysian SMEs ·
   <a href="<?= e(url('index.php')) ?>" style="color:var(--muted)">Home</a> ·
   <a href="<?= e(url('valuation-try.php')) ?>" style="color:var(--muted)">Free valuation tool</a> ·
   <a href="<?= e(url('signup.php')) ?>" style="color:var(--muted)">Sign up</a>

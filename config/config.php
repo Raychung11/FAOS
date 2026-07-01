@@ -59,7 +59,7 @@ load_env(APP_ROOT . '/.env');
 
 date_default_timezone_set((string) env('APP_TIMEZONE', 'Asia/Kuala_Lumpur'));
 
-define('APP_NAME',  (string) env('APP_NAME', 'AdvisorOS'));
+define('APP_NAME',  (string) env('APP_NAME', 'MaxWealth'));
 define('APP_ENV',   (string) env('APP_ENV', 'production'));
 define('APP_DEBUG', (bool)   env('APP_DEBUG', false));
 /**

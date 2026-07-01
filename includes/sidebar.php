@@ -82,7 +82,7 @@ if ($role === 'super_admin') {
 }
 ?>
 <aside class="sidebar" id="sidebar">
-  <div class="brand"><?= e(APP_NAME) ?><span>OS</span></div>
+  <div class="brand"><?= e(APP_NAME) ?></div>
   <nav class="nav-group">
     <?php foreach ($nav as $section => $items): ?>
       <div class="nav-label"><?= e($section) ?></div>

@@ -154,7 +154,7 @@ $riskLabels = [0 => 'Low (well-diversified, strong #2)',
                2 => 'High (founder-dependent)',
                3 => 'Critical (single point of failure)'];
 
-$pageTitle = 'Try the Business Valuation — AdvisorOS';
+$pageTitle = 'Try the Business Valuation — ' . APP_NAME;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -236,7 +236,7 @@ $pageTitle = 'Try the Business Valuation — AdvisorOS';
 <body>
 <div class="vt-nav">
   <div class="vt-wrap" style="display:flex;justify-content:space-between;align-items:center;width:100%;padding:18px 22px">
-    <a href="<?= e(url('index.php')) ?>" class="vt-logo" style="text-decoration:none"><?= e(APP_NAME) ?><span>OS</span></a>
+    <a href="<?= e(url('index.php')) ?>" class="vt-logo" style="text-decoration:none"><?= e(APP_NAME) ?></a>
     <div style="display:flex;gap:12px;align-items:center">
       <a href="<?= e(url('index.php')) ?>" style="font-size:14px;color:var(--ink);text-decoration:none;font-weight:500">← Back to home</a>
       <?php if ($owner): ?>
@@ -458,7 +458,7 @@ $pageTitle = 'Try the Business Valuation — AdvisorOS';
 <?php endif; // !locked-no-result ?>
 
 <footer style="text-align:center;padding:30px 0;color:var(--muted);font-size:12.5px">
-  © <?= date('Y') ?> <?= e(APP_NAME) ?>OS · Built for Malaysian SMEs ·
+  © <?= date('Y') ?> <?= e(APP_NAME) ?> · Built for Malaysian SMEs ·
   <a href="<?= e(url('index.php')) ?>" style="color:var(--muted)">Home</a> ·
   <a href="<?= e(url('signup.php')) ?>" style="color:var(--muted)">Sign up</a>
 </footer>

@@ -61,7 +61,7 @@ $pageTitle = 'Your dashboard — ' . APP_NAME;
 </head>
 <body>
 <div class="op-nav">
-  <a href="<?= e(url('index.php')) ?>" class="op-logo"><?= e(APP_NAME) ?><span>OS</span></a>
+  <a href="<?= e(url('index.php')) ?>" class="op-logo"><?= e(APP_NAME) ?></a>
   <div style="display:flex;gap:12px;align-items:center">
     <span style="color:var(--muted);font-size:13px">Signed in as
       <strong style="color:var(--navy)"><?= e($me['name']) ?></strong></span>

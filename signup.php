@@ -71,7 +71,7 @@ require __DIR__ . '/includes/auth_header.php';
 ?>
 <?php if ($sent): ?>
   <h2>You're on the list</h2>
-  <div class="sub">Thanks for your interest in AdvisorOS. We'll review your
+  <div class="sub">Thanks for your interest in <?= e(APP_NAME) ?>. We'll review your
     request and reach out shortly to set up your workspace and walk you
     through advising business owners on the platform.</div>
   <a class="btn-os" style="width:100%;justify-content:center"

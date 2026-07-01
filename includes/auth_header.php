@@ -16,10 +16,10 @@ $pageTitle = $pageTitle ?? 'Sign in';
 <body>
 <div class="auth-wrap">
   <div class="auth-brand">
-    <h1><?= e(APP_NAME) ?><span>OS</span></h1>
-    <p>The Client Servicing Operating System for Financial Advisors. Move
-       from scattered spreadsheets and memory-based follow-ups to a
-       structured, professional advisory operation.</p>
+    <h1><?= e(APP_NAME) ?></h1>
+    <p>The wealth advisory platform for business owners in Malaysia.
+       Personal &amp; business wealth, valuation, equity structure,
+       succession and tax in one place.</p>
     <ul>
       <li>Never miss a client annual review again</li>
       <li>Track policies, renewals and servicing in one place</li>
